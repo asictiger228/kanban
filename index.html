@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Канбан-доска 1С</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        .kanban-col { min-height: 50vh; }
+        .task-card { cursor: grab; }
+        .task-card:active { cursor: grabbing; }
+        .loader { border-top-color: #3b82f6; animation: spinner 1s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #modal { display: none; }
+        #modal.active { display: flex; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col font-sans">
+
+    <!-- Шапка -->
+    <header class="bg-white shadow px-6 py-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">Контроль Задач 1С</h1>
+        <div class="flex items-center gap-4">
+            <span id="sync-status" class="text-sm text-gray-500">Ожидание данных...</span>
+            <button onclick="loadTasks()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow transition">
+                Обновить доску
+            </button>
+        </div>
+    </header>
+
+    <!-- Доска -->
+    <main class="flex-1 overflow-x-auto p-6">
+        <div class="flex gap-6 min-w-max" id="board">
+            
+            <!-- Колонки -->
+            <div class="w-80 bg-gray-200 rounded-lg flex flex-col">
+                <div class="p-3 bg-gray-300 rounded-t-lg font-bold text-gray-700 flex justify-between">
+                    Создано <span id="count-Создано" class="text-sm bg-white px-2 rounded-full">0</span>
+                </div>
+                <div id="Создано" class="kanban-col p-3 flex flex-col gap-3" data-status="Создано"></div>
+            </div>
+
+            <div class="w-80 bg-gray-200 rounded-lg flex flex-col">
+                <div class="p-3 bg-blue-200 rounded-t-lg font-bold text-blue-800 flex justify-between">
+                    В работе <span id="count-В работе" class="text-sm bg-white px-2 rounded-full">0</span>
+                </div>
+                <div id="В работе" class="kanban-col p-3 flex flex-col gap-3" data-status="В работе"></div>
+            </div>
+
+            <div class="w-80 bg-gray-200 rounded-lg flex flex-col">
+                <div class="p-3 bg-yellow-200 rounded-t-lg font-bold text-yellow-800 flex justify-between">
+                    Тест <span id="count-Тест" class="text-sm bg-white px-2 rounded-full">0</span>
+                </div>
+                <div id="Тест" class="kanban-col p-3 flex flex-col gap-3" data-status="Тест"></div>
+            </div>
+
+            <div class="w-80 bg-gray-200 rounded-lg flex flex-col">
+                <div class="p-3 bg-orange-200 rounded-t-lg font-bold text-orange-800 flex justify-between">
+                    Готово в тестовой <span id="count-Готово в тестовой" class="text-sm bg-white px-2 rounded-full">0</span>
+                </div>
+                <div id="Готово в тестовой" class="kanban-col p-3 flex flex-col gap-3" data-status="Готово в тестовой"></div>
+            </div>
+
+            <div class="w-80 bg-gray-200 rounded-lg flex flex-col">
+                <div class="p-3 bg-green-200 rounded-t-lg font-bold text-green-800 flex justify-between">
+                    Готово в рабочей <span id="count-Готово в рабочей" class="text-sm bg-white px-2 rounded-full">0</span>
+                </div>
+                <div id="Готово в рабочей" class="kanban-col p-3 flex flex-col gap-3" data-status="Готово в рабочей"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Модальное окно задачи -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500 font-bold text-xl">&times;</button>
+            <h2 id="modal-title" class="text-xl font-bold mb-2 pr-6">Название задачи</h2>
+            <p id="modal-desc" class="text-gray-600 mb-4 text-sm whitespace-pre-wrap"></p>
+            
+            <div id="extra-fields" class="hidden flex-col gap-4 border-t pt-4 mt-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Тэг (например, //ЮАШ++)</label>
+                    <input type="text" id="modal-tag" class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Где применены изменения</label>
+                    <textarea id="modal-changes" class="w-full border rounded px-3 py-2 text-sm h-20"></textarea>
+                </div>
+                <button onclick="saveTaskDetails()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-bold transition">
+                    Сохранить изменения
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbxmaDEtQNgoLmHyrekqEJcMpLXrqs2A4nAxC2XoMtRCQfxO22TtjYZugJ4WVunvGNga/exec";
+        let currentTasks = [];
+        let activeTaskId = null;
+
+        // Инициализация Drag-and-Drop
+        document.querySelectorAll('.kanban-col').forEach(col => {
+            new Sortable(col, {
+                group: 'kanban',
+                animation: 150,
+                onEnd: function (evt) {
+                    const taskId = evt.item.dataset.id;
+                    const newStatus = evt.to.dataset.status;
+                    updateTaskStatus(taskId, newStatus);
+                }
+            });
+        });
+
+        async function loadTasks() {
+            document.getElementById("sync-status").innerText = "Загрузка из Google Sheets...";
+            try {
+                const response = await fetch(API_URL);
+                currentTasks = await response.json();
+                renderBoard();
+                document.getElementById("sync-status").innerText = "Синхронизировано";
+                document.getElementById("sync-status").className = "text-sm text-green-600 font-bold";
+            } catch (error) {
+                document.getElementById("sync-status").innerText = "Ошибка загрузки";
+                document.getElementById("sync-status").className = "text-sm text-red-500 font-bold";
+            }
+        }
+
+        function renderBoard() {
+            // Очистка колонок
+            document.querySelectorAll('.kanban-col').forEach(col => col.innerHTML = '');
+            const counts = { "Создано": 0, "В работе": 0, "Тест": 0, "Готово в тестовой": 0, "Готово в рабочей": 0 };
+
+            // Отрисовка карточек
+            currentTasks.forEach(task => {
+                let status = task['Статус'] || 'Создано';
+                if (!counts.hasOwnProperty(status)) status = 'Создано';
+                
+                const isNew = !localStorage.getItem('seen_' + task['ID']);
+                
+                const card = document.createElement('div');
+                card.className = "task-card bg-white p-3 rounded shadow border-l-4 border-blue-500 hover:shadow-md transition relative";
+                card.dataset.id = task['ID'];
+                
+                let tagBadge = task['Тэг'] ? `<span class="mt-2 inline-block bg-gray-100 text-xs text-gray-500 px-2 py-1 rounded border">${task['Тэг']}</span>` : '';
+                let newBadge = isNew ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded animate-pulse">NEW</span>` : '';
+
+                card.innerHTML = `
+                    <div class="text-xs text-gray-400 mb-1">${task['ID']} | ${task['Месяц'] || ''}</div>
+                    <div class="font-bold text-sm text-gray-800 leading-tight pr-8">${task['Задача']}</div>
+                    ${tagBadge}
+                    ${newBadge}
+                `;
+                
+                card.onclick = () => openModal(task);
+                document.getElementById(status).appendChild(card);
+                counts[status]++;
+                
+                // Помечаем как просмотренную в локальной памяти
+                localStorage.setItem('seen_' + task['ID'], 'true');
+            });
+
+            // Обновление счетчиков
+            Object.keys(counts).forEach(key => {
+                document.getElementById("count-" + key).innerText = counts[key];
+            });
+        }
+
+        function updateTaskStatus(taskId, newStatus) {
+            document.getElementById("sync-status").innerText = "Сохранение...";
+            document.getElementById("sync-status").className = "text-sm text-yellow-600 font-bold";
+            
+            const task = currentTasks.find(t => String(t['ID']) === String(taskId));
+            if (task) {
+                task['Статус'] = newStatus;
+                renderBoard(); // Перерисовываем счетчики
+                
+                // Отправка данных в Google Sheets в фоновом режиме (no-cors)
+                fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ID: task['ID'],
+                        Статус: task['Статус'],
+                        Тэг: task['Тэг'] || "",
+                        Изменения: task['Изменения'] || ""
+                    })
+                }).then(() => {
+                    document.getElementById("sync-status").innerText = "Синхронизировано";
+                    document.getElementById("sync-status").className = "text-sm text-green-600 font-bold";
+                });
+            }
+        }
+
+        function openModal(task) {
+            activeTaskId = task['ID'];
+            document.getElementById('modal-title').innerText = task['Задача'];
+            document.getElementById('modal-desc').innerText = task['Описание'] || 'Описание отсутствует';
+            
+            const extraFields = document.getElementById('extra-fields');
+            if (task['Статус'] === 'Готово в тестовой' || task['Статус'] === 'Готово в рабочей') {
+                extraFields.classList.remove('hidden');
+                extraFields.classList.add('flex');
+                document.getElementById('modal-tag').value = task['Тэг'] || '';
+                document.getElementById('modal-changes').value = task['Изменения'] || '';
+            } else {
+                extraFields.classList.add('hidden');
+                extraFields.classList.remove('flex');
+            }
+            
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            activeTaskId = null;
+        }
+
+        function saveTaskDetails() {
+            const tag = document.getElementById('modal-tag').value;
+            const changes = document.getElementById('modal-changes').value;
+            
+            const task = currentTasks.find(t => String(t['ID']) === String(activeTaskId));
+            if (task) {
+                task['Тэг'] = tag;
+                task['Изменения'] = changes;
+                updateTaskStatus(task['ID'], task['Статус']); // Вызываем ту же функцию для отправки POST
+            }
+            closeModal();
+        }
+
+        // Закрытие окна по клику вне его
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Первоначальная загрузка
+        window.onload = loadTasks;
+    </script>
+</body>
+</html>
