@@ -10,8 +10,6 @@
         .kanban-col { min-height: 50vh; }
         .task-card { cursor: grab; }
         .task-card:active { cursor: grabbing; }
-        .loader { border-top-color: #3b82f6; animation: spinner 1s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #modal { display: none; }
         #modal.active { display: flex; }
     </style>
@@ -20,7 +18,15 @@
 
     <!-- Шапка -->
     <header class="bg-white shadow px-6 py-4 flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-gray-800">Контроль Задач 1С</h1>
+        <div class="flex items-center gap-6">
+            <h1 class="text-2xl font-bold text-gray-800">Контроль Задач 1С</h1>
+            
+            <!-- Выпадающий список для фильтрации -->
+            <select id="month-filter" onchange="renderBoard()" class="border border-gray-300 rounded px-3 py-2 bg-gray-50 text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <option value="ALL">Все месяцы</option>
+            </select>
+        </div>
+
         <div class="flex items-center gap-4">
             <span id="sync-status" class="text-sm text-gray-500">Ожидание данных...</span>
             <button onclick="loadTasks()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow transition">
@@ -33,7 +39,6 @@
     <main class="flex-1 overflow-x-auto p-6">
         <div class="flex gap-6 min-w-max" id="board">
             
-            <!-- Колонки -->
             <div class="w-80 bg-gray-200 rounded-lg flex flex-col">
                 <div class="p-3 bg-gray-300 rounded-t-lg font-bold text-gray-700 flex justify-between">
                     Создано <span id="count-Создано" class="text-sm bg-white px-2 rounded-full">0</span>
@@ -72,7 +77,7 @@
         </div>
     </main>
 
-    <!-- Модальное окно задачи -->
+    <!-- Модальное окно -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative">
             <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500 font-bold text-xl">&times;</button>
@@ -96,11 +101,12 @@
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxmaDEtQNgoLmHyrekqEJcMpLXrqs2A4nAxC2XoMtRCQfxO22TtjYZugJ4WVunvGNga/exec";
+        // Интегрирована новая ссылка вашего API
+        const API_URL = "https://script.google.com/macros/s/AKfycbzv3KbAj5GnW66Ay1iHVBUvb3E7VWVCaZtYthjvKXyMY6qyu4qlqf44oQdvvoU_XXBO/exec"; 
+        
         let currentTasks = [];
         let activeTaskId = null;
 
-        // Инициализация Drag-and-Drop
         document.querySelectorAll('.kanban-col').forEach(col => {
             new Sortable(col, {
                 group: 'kanban',
@@ -118,7 +124,10 @@
             try {
                 const response = await fetch(API_URL);
                 currentTasks = await response.json();
+                
+                populateMonthFilter();
                 renderBoard();
+                
                 document.getElementById("sync-status").innerText = "Синхронизировано";
                 document.getElementById("sync-status").className = "text-sm text-green-600 font-bold";
             } catch (error) {
@@ -127,13 +136,37 @@
             }
         }
 
+        function populateMonthFilter() {
+            const select = document.getElementById("month-filter");
+            const currentSelection = select.value;
+            
+            // Собираем уникальные названия листов (вкладок)
+            const sheets = [...new Set(currentTasks.map(t => t['SheetName']))].filter(Boolean);
+            
+            select.innerHTML = '<option value="ALL">Все месяцы</option>';
+            sheets.forEach(sheet => {
+                const option = document.createElement("option");
+                option.value = sheet;
+                option.innerText = sheet;
+                select.appendChild(option);
+            });
+            
+            // Возвращаем старый выбор, если он был
+            if (sheets.includes(currentSelection) || currentSelection === "ALL") {
+                select.value = currentSelection;
+            }
+        }
+
         function renderBoard() {
-            // Очистка колонок
             document.querySelectorAll('.kanban-col').forEach(col => col.innerHTML = '');
             const counts = { "Создано": 0, "В работе": 0, "Тест": 0, "Готово в тестовой": 0, "Готово в рабочей": 0 };
+            
+            const selectedMonth = document.getElementById("month-filter").value;
 
-            // Отрисовка карточек
             currentTasks.forEach(task => {
+                // Фильтрация по месяцу (имени вкладки в таблице)
+                if (selectedMonth !== "ALL" && task['SheetName'] !== selectedMonth) return;
+
                 let status = task['Статус'] || 'Создано';
                 if (!counts.hasOwnProperty(status)) status = 'Создано';
                 
@@ -147,7 +180,10 @@
                 let newBadge = isNew ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded animate-pulse">NEW</span>` : '';
 
                 card.innerHTML = `
-                    <div class="text-xs text-gray-400 mb-1">${task['ID']} | ${task['Месяц'] || ''}</div>
+                    <div class="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>ID: ${task['ID']}</span>
+                        <span class="font-bold text-gray-500">${task['SheetName'] || ''}</span>
+                    </div>
                     <div class="font-bold text-sm text-gray-800 leading-tight pr-8">${task['Задача']}</div>
                     ${tagBadge}
                     ${newBadge}
@@ -157,11 +193,9 @@
                 document.getElementById(status).appendChild(card);
                 counts[status]++;
                 
-                // Помечаем как просмотренную в локальной памяти
                 localStorage.setItem('seen_' + task['ID'], 'true');
             });
 
-            // Обновление счетчиков
             Object.keys(counts).forEach(key => {
                 document.getElementById("count-" + key).innerText = counts[key];
             });
@@ -174,15 +208,16 @@
             const task = currentTasks.find(t => String(t['ID']) === String(taskId));
             if (task) {
                 task['Статус'] = newStatus;
-                renderBoard(); // Перерисовываем счетчики
+                renderBoard(); 
                 
-                // Отправка данных в Google Sheets в фоновом режиме (no-cors)
+                // Отправляем на сервер SheetName, чтобы скрипт обновил задачу в правильной вкладке
                 fetch(API_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         ID: task['ID'],
+                        SheetName: task['SheetName'],
                         Статус: task['Статус'],
                         Тэг: task['Тэг'] || "",
                         Изменения: task['Изменения'] || ""
@@ -226,17 +261,15 @@
             if (task) {
                 task['Тэг'] = tag;
                 task['Изменения'] = changes;
-                updateTaskStatus(task['ID'], task['Статус']); // Вызываем ту же функцию для отправки POST
+                updateTaskStatus(task['ID'], task['Статус']);
             }
             closeModal();
         }
 
-        // Закрытие окна по клику вне его
         document.getElementById('modal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
         });
 
-        // Первоначальная загрузка
         window.onload = loadTasks;
     </script>
 </body>
