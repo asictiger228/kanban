@@ -109,10 +109,10 @@
 
     <!-- РЕЗИНОВАЯ ДОСКА КАНБАН (100% ШИРИНЫ) СО СВОРАЧИВАНИЕМ КОЛОНОК -->
     <main class="flex-1 p-3 md:p-5 overflow-x-auto w-full">
-        <div class="flex gap-3.5 w-full min-w-[900px] items-start">
+        <div class="flex gap-3.5 w-full min-w-[1100px] items-start">
             
             <!-- 1. СОЗДАНО -->
-            <div id="col-wrapper-Создано" class="column-container flex-1 min-w-[190px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div id="col-wrapper-Создано" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
                 <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
                     <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-slate-300">
                         <span class="w-2 h-2 rounded-full bg-slate-400"></span> 
@@ -134,7 +134,7 @@
             </div>
 
             <!-- 2. В РАБОТЕ -->
-            <div id="col-wrapper-В работе" class="column-container flex-1 min-w-[190px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div id="col-wrapper-В работе" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
                 <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
                     <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-amber-400">
                         <span class="w-2 h-2 rounded-full bg-amber-400"></span> 
@@ -156,7 +156,7 @@
             </div>
 
             <!-- 3. ТЕСТ -->
-            <div id="col-wrapper-Тест" class="column-container flex-1 min-w-[190px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div id="col-wrapper-Тест" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
                 <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
                     <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-purple-400">
                         <span class="w-2 h-2 rounded-full bg-purple-400"></span> 
@@ -178,7 +178,7 @@
             </div>
 
             <!-- 4. ГОТОВО В ТЕСТОВОЙ -->
-            <div id="col-wrapper-Готово в тестовой" class="column-container flex-1 min-w-[190px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div id="col-wrapper-Готово в тестовой" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
                 <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
                     <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-sky-400">
                         <span class="w-2 h-2 rounded-full bg-sky-400"></span> 
@@ -199,8 +199,30 @@
                 </div>
             </div>
 
-            <!-- 5. ГОТОВО В РАБОЧЕЙ -->
-            <div id="col-wrapper-Готово в рабочей" class="column-container flex-1 min-w-[190px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <!-- 5. ПРОВЕРЕНО (ЖДЕТ В РАБОЧУЮ) -->
+            <div id="col-wrapper-Проверено" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+                <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
+                    <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-indigo-400">
+                        <span class="w-2 h-2 rounded-full bg-indigo-400"></span> 
+                        <span class="col-label">Проверено</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span id="count-Проверено" class="count-badge mono text-[11px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/30">0</span>
+                        <button onclick="openCreateModal('Проверено')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
+                        <button onclick="toggleCollapse('Проверено')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
+                    </div>
+                </div>
+                <div id="Проверено" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Проверено"></div>
+                
+                <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Проверено')" title="Кликните, чтобы развернуть">
+                    <span id="collapsed-count-Проверено" class="mono text-[11px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/30">0</span>
+                    <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-indigo-400">Проверено</span>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+                </div>
+            </div>
+
+            <!-- 6. ГОТОВО В РАБОЧЕЙ -->
+            <div id="col-wrapper-Готово в рабочей" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
                 <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
                     <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-emerald-400">
                         <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 
@@ -297,6 +319,7 @@
                         <option value="В работе">В работе</option>
                         <option value="Тест">Тест</option>
                         <option value="Готово в тестовой">Готово в тестовой</option>
+                        <option value="Проверено">Проверено</option>
                         <option value="Готово в рабочей">Готово в рабочей</option>
                     </select>
                 </div>
@@ -330,7 +353,7 @@
         let availableSheets = [];
         let currentTheme = localStorage.getItem('kanban_theme') || 'linear';
 
-        // Инициализация Drag and Drop для всех 5 колонок
+        // Инициализация Drag and Drop для всех 6 колонок
         document.querySelectorAll('.kanban-col').forEach(col => {
             new Sortable(col, {
                 group: 'kanban',
@@ -356,7 +379,7 @@
 
             if (!isCollapsed) {
                 wrapper.classList.add('is-collapsed');
-                wrapper.classList.remove('flex-1', 'min-w-[190px]', 'p-3');
+                wrapper.classList.remove('flex-1', 'min-w-[180px]', 'p-3');
                 wrapper.classList.add('w-12', 'min-w-[48px]', 'p-2', 'items-center');
                 head.classList.add('hidden');
                 list.classList.add('hidden');
@@ -364,7 +387,7 @@
                 placeholder.classList.add('flex');
             } else {
                 wrapper.classList.remove('is-collapsed', 'w-12', 'min-w-[48px]', 'p-2', 'items-center');
-                wrapper.classList.add('flex-1', 'min-w-[190px]', 'p-3');
+                wrapper.classList.add('flex-1', 'min-w-[180px]', 'p-3');
                 head.classList.remove('hidden');
                 list.classList.remove('hidden');
                 placeholder.classList.remove('flex');
@@ -409,7 +432,7 @@
 
                 columns.forEach(c => {
                     if (!c.classList.contains('is-collapsed')) {
-                        c.className = "column-container flex-1 min-w-[190px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300";
+                        c.className = "column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300";
                     }
                 });
                 colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80");
@@ -427,7 +450,7 @@
 
                 columns.forEach(c => {
                     if (!c.classList.contains('is-collapsed')) {
-                        c.className = "column-container flex-1 min-w-[190px] bg-[#ebecf0] rounded-xl border border-slate-300/80 p-3 shadow-sm flex flex-col transition-all duration-300";
+                        c.className = "column-container flex-1 min-w-[180px] bg-[#ebecf0] rounded-xl border border-slate-300/80 p-3 shadow-sm flex flex-col transition-all duration-300";
                     }
                 });
                 colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-300");
@@ -445,7 +468,7 @@
 
                 columns.forEach(c => {
                     if (!c.classList.contains('is-collapsed')) {
-                        c.className = "column-container flex-1 min-w-[180px] bg-[#212631] rounded-lg border border-slate-700/80 p-2 shadow-none flex flex-col transition-all duration-300";
+                        c.className = "column-container flex-1 min-w-[170px] bg-[#212631] rounded-lg border border-slate-700/80 p-2 shadow-none flex flex-col transition-all duration-300";
                     }
                 });
                 colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-1.5 px-1 border-b border-slate-700");
@@ -463,7 +486,7 @@
 
                 columns.forEach(c => {
                     if (!c.classList.contains('is-collapsed')) {
-                        c.className = "column-container flex-1 min-w-[190px] bg-[#1f2623] rounded-2xl border border-[#35403b] p-3 shadow-md flex flex-col transition-all duration-300";
+                        c.className = "column-container flex-1 min-w-[180px] bg-[#1f2623] rounded-2xl border border-[#35403b] p-3 shadow-md flex flex-col transition-all duration-300";
                     }
                 });
                 colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-2.5 px-1 border-b border-[#323d38] text-[#9eb2a8]");
@@ -524,7 +547,14 @@
         // Отрисовка задач в колонках
         function renderBoard() {
             document.querySelectorAll('.kanban-col').forEach(col => col.innerHTML = '');
-            const counts = { "Создано": 0, "В работе": 0, "Тест": 0, "Готово в тестовой": 0, "Готово в рабочей": 0 };
+            const counts = { 
+                "Создано": 0, 
+                "В работе": 0, 
+                "Тест": 0, 
+                "Готово в тестовой": 0, 
+                "Проверено": 0, 
+                "Готово в рабочей": 0 
+            };
             
             const selectedMonth = document.getElementById("month-filter").value;
             const query = (document.getElementById("search-input").value || "").toLowerCase().trim();
@@ -669,7 +699,7 @@
             populateMoveMonthOptions(task['SheetName']);
 
             const extraFields = document.getElementById('edit-extra-fields');
-            if (task['Статус'] === 'Готово в тестовой' || task['Статус'] === 'Готово в рабочей') {
+            if (task['Статус'] === 'Готово в тестовой' || task['Статус'] === 'Проверено' || task['Статус'] === 'Готово в рабочей') {
                 extraFields.classList.remove('hidden');
                 extraFields.classList.add('flex');
                 document.getElementById('edit-modal-tag').value = task['Тэг'] || '';
@@ -758,7 +788,7 @@
                 task['Задача'] = document.getElementById('edit-modal-title').value;
                 task['Описание'] = document.getElementById('edit-modal-desc').value;
 
-                if (task['Статус'] === 'Готово в тестовой' || task['Статус'] === 'Готово в рабочей') {
+                if (task['Статус'] === 'Готово в тестовой' || task['Статус'] === 'Проверено' || task['Статус'] === 'Готово в рабочей') {
                     task['Тэг'] = document.getElementById('edit-modal-tag').value;
                     task['Изменения'] = document.getElementById('edit-modal-changes').value;
                 }
