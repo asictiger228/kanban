@@ -1,1134 +1,1181 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Контроль Задач 1С | Канбан</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .sortable-ghost { opacity: 0.25; transform: scale(0.97); }
+    .sortable-chosen { cursor: grabbing !important; }
+    ::-webkit-scrollbar { width: 5px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(150, 150, 150, 0.25); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(150, 150, 150, 0.45); }
+
+    .vertical-text {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+    }
+
+    /* Тема: Темная уютная пастель */
+    body.theme-pastel {
+        background-color: #262e2b !important;
+        color: #d1dbd6 !important;
+    }
+    body.theme-pastel header {
+        background-color: #1c2220 !important;
+        border-bottom-color: #343e3a !important;
+    }
+    body.theme-pastel .column-container {
+        background-color: #1f2623 !important;
+        border-color: #35403b !important;
+        box-shadow: 0 4px 16px rgba(12, 16, 14, 0.35) !important;
+    }
+    body.theme-pastel .card-item {
+        background-color: #181e1b !important;
+        border-color: #313b37 !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+    }
+    body.theme-pastel .card-item:hover {
+        background-color: #1d2522 !important;
+        border-color: #556860 !important;
+    }
+
+    /* Широкие интерактивные кнопки этапов */
+    .stage-btn {
+        flex: 1;
+        padding: 5px 0;
+        text-align: center;
+        font-size: 10px;
+        font-weight: 700;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+        user-select: none;
+        cursor: pointer;
+        letter-spacing: 0.02em;
+    }
+    .stage-btn-inactive {
+        background: rgba(148, 163, 184, 0.08);
+        color: #94a3b8;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .stage-btn-inactive:hover {
+        background: rgba(148, 163, 184, 0.2);
+        color: #ffffff;
+        border-color: rgba(148, 163, 184, 0.4);
+    }
+    .stage-btn-active {
+        background: rgba(34, 197, 94, 0.22);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.55);
+        box-shadow: 0 0 10px rgba(34, 197, 94, 0.15);
+    }
+
+    .card-urgent-border {
+        border-left: 4px solid #ef4444 !important;
+    }
+</style>
+
+
+<!-- ВЕРХНЯЯ ШАПКА -->
+<header id="main-header" class="bg-[#111827] border-b border-slate-800 px-5 py-3 sticky top-0 z-30 shadow-lg transition-colors">
+    <div class="w-full flex flex-wrap items-center justify-between gap-3">
         
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .sortable-ghost { opacity: 0.25; transform: scale(0.97); }
-        .sortable-chosen { cursor: grabbing !important; }
-        ::-webkit-scrollbar { width: 5px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: rgba(150, 150, 150, 0.25); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(150, 150, 150, 0.45); }
-
-        .vertical-text {
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
-        }
-
-        /* Темная уютная пастель */
-        body.theme-pastel {
-            background-color: #262e2b !important;
-            color: #d1dbd6 !important;
-        }
-        body.theme-pastel header {
-            background-color: #1c2220 !important;
-            border-bottom-color: #343e3a !important;
-        }
-        body.theme-pastel .column-container {
-            background-color: #1f2623 !important;
-            border-color: #35403b !important;
-            box-shadow: 0 4px 16px rgba(12, 16, 14, 0.35) !important;
-        }
-        body.theme-pastel .card-item {
-            background-color: #181e1b !important;
-            border-color: #313b37 !important;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
-        }
-        body.theme-pastel .card-item:hover {
-            background-color: #1d2522 !important;
-            border-color: #556860 !important;
-        }
-
-        /* Индикаторы этапов */
-        .stage-pill {
-            font-size: 9px;
-            font-weight: 700;
-            padding: 1px 5px;
-            border-radius: 4px;
-            letter-spacing: 0.02em;
-        }
-        .stage-pill-inactive {
-            background: rgba(148, 163, 184, 0.12);
-            color: rgba(148, 163, 184, 0.6);
-        }
-        .stage-pill-active {
-            background: rgba(34, 197, 94, 0.2);
-            color: #4ade80;
-            border: 1px solid rgba(34, 197, 94, 0.35);
-        }
-        .card-urgent-border {
-            border-left: 4px solid #ef4444 !important;
-        }
-    </style>
-</head>
-<body id="page-body" class="bg-[#0b0f17] text-slate-200 min-h-screen flex flex-col antialiased transition-colors duration-200">
-
-    <!-- ВЕРХНЯЯ ШАПКА -->
-    <header id="main-header" class="bg-[#111827] border-b border-slate-800 px-5 py-3 sticky top-0 z-30 shadow-lg transition-colors">
-        <div class="w-full flex flex-wrap items-center justify-between gap-3">
-            
-            <div class="flex items-center gap-3 flex-wrap">
-                <div class="flex items-center gap-2">
-                    <div id="sync-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span id="header-title" class="font-bold text-sm tracking-wide text-white">1С: КАНБАН ЗАДАЧ</span>
-                </div>
-
-                <div class="h-4 w-px bg-slate-700 hidden sm:block"></div>
-
-                <!-- Фильтр по месяцу -->
-                <div class="flex items-center gap-1.5">
-                    <i class="fa-regular fa-calendar text-xs opacity-70"></i>
-                    <select id="month-filter" onchange="renderBoard()" class="bg-[#1a2333] border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 outline-none transition cursor-pointer">
-                        <option value="ALL">Все месяцы</option>
-                    </select>
-                </div>
-
-                <!-- Быстрые фильтры: Срочно и На паузе -->
-                <div class="flex items-center gap-1 bg-[#0b0f17] p-1 rounded-xl border border-slate-800 text-xs">
-                    <button id="filter-urgent-btn" onclick="toggleFilter('urgent')" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 font-medium">
-                        <i class="fa-solid fa-fire text-rose-500 text-[11px]"></i> Срочные
-                    </button>
-                    <button id="filter-paused-btn" onclick="toggleFilter('paused')" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 font-medium">
-                        <i class="fa-solid fa-pause text-amber-500 text-[11px]"></i> На паузе
-                    </button>
-                </div>
-
-                <!-- Переключатель тем -->
-                <div id="theme-switch-box" class="flex items-center gap-1 bg-[#0b0f17] p-1 rounded-xl border border-slate-800 text-[11px] flex-wrap">
-                    <button onclick="setTheme('linear')" id="btn-theme-linear" class="px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-blue-600 text-white">
-                        <i class="fa-solid fa-moon text-[10px]"></i> Dark
-                    </button>
-                    <button onclick="setTheme('enterprise')" id="btn-theme-enterprise" class="px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white">
-                        <i class="fa-solid fa-sun text-[10px]"></i> Light
-                    </button>
-                    <button onclick="setTheme('compact')" id="btn-theme-compact" class="px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white">
-                        <i class="fa-solid fa-table-cells text-[10px]"></i> Компакт
-                    </button>
-                    <button onclick="setTheme('pastel')" id="btn-theme-pastel" class="px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white">
-                        <i class="fa-solid fa-palette text-[10px]"></i> Пастель
-                    </button>
-                </div>
+        <div class="flex items-center gap-3 flex-wrap">
+            <div class="flex items-center gap-2">
+                <div id="sync-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span id="header-title" class="font-bold text-sm tracking-wide text-white">1С: КАНБАН ЗАДАЧ</span>
             </div>
 
-            <!-- Поиск, статус, обновление и создание задачи -->
-            <div class="flex items-center gap-2.5">
-                <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs opacity-50"></i>
-                    <input type="text" id="search-input" oninput="renderBoard()" placeholder="Поиск задачи, ID, блокера..." class="bg-[#1a2333] border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs placeholder-slate-500 w-44 md:w-56 outline-none transition">
-                </div>
+            <div class="h-4 w-px bg-slate-700 hidden sm:block"></div>
 
-                <span id="sync-status" class="text-xs text-slate-400 font-medium hidden lg:inline">Синхронизировано</span>
+            <!-- Фильтр по месяцу -->
+            <div class="flex items-center gap-1.5">
+                <i class="fa-regular fa-calendar text-xs opacity-70"></i>
+                <select id="month-filter" onchange="renderBoard()" class="bg-[#1a2333] border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 outline-none transition cursor-pointer">
+                    <option value="ALL">Все месяцы</option>
+                </select>
+            </div>
 
-                <button onclick="loadTasks(true)" title="Обновить доску вручную" id="btn-refresh" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition border border-slate-700">
-                    <i class="fa-solid fa-arrows-rotate"></i>
+            <!-- Быстрые фильтры: Срочно и На паузе -->
+            <div class="flex items-center gap-1 bg-[#0b0f17] p-1 rounded-xl border border-slate-800 text-xs">
+                <button id="filter-urgent-btn" onclick="toggleFilter('urgent')" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 font-medium">
+                    <i class="fa-solid fa-fire text-rose-500 text-[11px]"></i> Срочные
                 </button>
+                <button id="filter-paused-btn" onclick="toggleFilter('paused')" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 font-medium">
+                    <i class="fa-solid fa-pause text-amber-500 text-[11px]"></i> На паузе
+                </button>
+            </div>
 
-                <button onclick="openCreateModal()" id="btn-create-task" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3.5 py-1.5 rounded-xl font-semibold flex items-center gap-2 transition shadow-lg shadow-blue-600/30">
-                    <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Создать задачу</span>
+            <!-- Переключатель тем -->
+            <div id="theme-switch-box" class="flex items-center gap-1 bg-[#0b0f17] p-1 rounded-xl border border-slate-800 text-[11px] flex-wrap">
+                <button onclick="setTheme('linear')" id="btn-theme-linear" class="px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-blue-600 text-white">
+                    <i class="fa-solid fa-moon text-[10px]"></i> Dark
+                </button>
+                <button onclick="setTheme('enterprise')" id="btn-theme-enterprise" class="px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-sun text-[10px]"></i> Light
+                </button>
+                <button onclick="setTheme('compact')" id="btn-theme-compact" class="px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-table-cells text-[10px]"></i> Компакт
+                </button>
+                <button onclick="setTheme('pastel')" id="btn-theme-pastel" class="px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-palette text-[10px]"></i> Пастель
                 </button>
             </div>
         </div>
-    </header>
 
-    <!-- ДОСКА КАНБАН -->
-    <main class="flex-1 p-3 md:p-5 overflow-x-auto w-full">
-        <div class="flex gap-3.5 w-full min-w-[1100px] items-start">
-            
-            <!-- 1. СОЗДАНО -->
-            <div id="col-wrapper-Создано" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
-                <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
-                    <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-slate-300">
-                        <span class="w-2 h-2 rounded-full bg-slate-400"></span> 
-                        <span class="col-label">Создано</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span id="count-Создано" class="count-badge mono text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700">0</span>
-                        <button onclick="openCreateModal('Создано')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
-                        <button onclick="toggleCollapse('Создано')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
-                    </div>
-                </div>
-                <div id="Создано" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Создано"></div>
-                
-                <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Создано')" title="Кликните, чтобы развернуть">
-                    <span id="collapsed-count-Создано" class="mono text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700">0</span>
-                    <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-slate-400">Создано</span>
-                    <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
-                </div>
+        <!-- Поиск, статус, обновление и кнопка создания -->
+        <div class="flex items-center gap-2.5">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs opacity-50"></i>
+                <input type="text" id="search-input" oninput="renderBoard()" placeholder="Поиск задачи, ID, блокера..." class="bg-[#1a2333] border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs placeholder-slate-500 w-44 md:w-56 outline-none transition">
             </div>
 
-            <!-- 2. В РАБОТЕ -->
-            <div id="col-wrapper-В работе" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
-                <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
-                    <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-amber-400">
-                        <span class="w-2 h-2 rounded-full bg-amber-400"></span> 
-                        <span class="col-label">В работе</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span id="count-В работе" class="count-badge mono text-[11px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/30">0</span>
-                        <button onclick="openCreateModal('В работе')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
-                        <button onclick="toggleCollapse('В работе')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
-                    </div>
-                </div>
-                <div id="В работе" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="В работе"></div>
-                
-                <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('В работе')" title="Кликните, чтобы развернуть">
-                    <span id="collapsed-count-В работе" class="mono text-[11px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/30">0</span>
-                    <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-amber-400">В работе</span>
-                    <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
-                </div>
-            </div>
+            <span id="sync-status" class="text-xs text-slate-400 font-medium hidden lg:inline">Синхронизировано</span>
 
-            <!-- 3. ТЕСТ -->
-            <div id="col-wrapper-Тест" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
-                <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
-                    <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-purple-400">
-                        <span class="w-2 h-2 rounded-full bg-purple-400"></span> 
-                        <span class="col-label">Тест</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span id="count-Тест" class="count-badge mono text-[11px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded-md border border-purple-500/30">0</span>
-                        <button onclick="openCreateModal('Тест')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
-                        <button onclick="toggleCollapse('Тест')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
-                    </div>
-                </div>
-                <div id="Тест" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Тест"></div>
-                
-                <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Тест')" title="Кликните, чтобы развернуть">
-                    <span id="collapsed-count-Тест" class="mono text-[11px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded-md border border-purple-500/30">0</span>
-                    <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-purple-400">Тест</span>
-                    <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
-                </div>
-            </div>
+            <button onclick="loadTasks(true)" title="Обновить доску вручную" id="btn-refresh" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition border border-slate-700">
+                <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
 
-            <!-- 4. ГОТОВО В ТЕСТОВОЙ -->
-            <div id="col-wrapper-Готово в тестовой" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
-                <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
-                    <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-sky-400">
-                        <span class="w-2 h-2 rounded-full bg-sky-400"></span> 
-                        <span class="col-label">Готово (Тест)</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span id="count-Готово в тестовой" class="count-badge mono text-[11px] bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-md border border-sky-500/30">0</span>
-                        <button onclick="openCreateModal('Готово в тестовой')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
-                        <button onclick="toggleCollapse('Готово в тестовой')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
-                    </div>
-                </div>
-                <div id="Готово в тестовой" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Готово в тестовой"></div>
-                
-                <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Готово в тестовой')" title="Кликните, чтобы развернуть">
-                    <span id="collapsed-count-Готово в тестовой" class="mono text-[11px] bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-md border border-sky-500/30">0</span>
-                    <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-sky-400">Готово (Тест)</span>
-                    <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
-                </div>
-            </div>
-
-            <!-- 5. ПРОВЕРЕНО -->
-            <div id="col-wrapper-Проверено" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
-                <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
-                    <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-indigo-400">
-                        <span class="w-2 h-2 rounded-full bg-indigo-400"></span> 
-                        <span class="col-label">Проверено</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span id="count-Проверено" class="count-badge mono text-[11px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/30">0</span>
-                        <button onclick="openCreateModal('Проверено')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
-                        <button onclick="toggleCollapse('Проверено')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
-                    </div>
-                </div>
-                <div id="Проверено" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Проверено"></div>
-                
-                <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Проверено')" title="Кликните, чтобы развернуть">
-                    <span id="collapsed-count-Проверено" class="mono text-[11px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/30">0</span>
-                    <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-indigo-400">Проверено</span>
-                    <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
-                </div>
-            </div>
-
-            <!-- 6. ГОТОВО В РАБОЧЕЙ -->
-            <div id="col-wrapper-Готово в рабочей" class="column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
-                <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
-                    <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-emerald-400">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 
-                        <span class="col-label">В рабочей</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span id="count-Готово в рабочей" class="count-badge mono text-[11px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/30">0</span>
-                        <button onclick="openCreateModal('Готово в рабочей')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
-                        <button onclick="toggleCollapse('Готово в рабочей')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
-                    </div>
-                </div>
-                <div id="Готово в рабочей" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Готово в рабочей"></div>
-                
-                <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Готово в рабочей')" title="Кликните, чтобы развернуть">
-                    <span id="collapsed-count-Готово в рабочей" class="mono text-[11px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/30">0</span>
-                    <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-emerald-400">В рабочей</span>
-                    <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
-                </div>
-            </div>
-
+            <button onclick="openCreateModal()" id="btn-create-task" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3.5 py-1.5 rounded-xl font-semibold flex items-center gap-2 transition shadow-lg shadow-blue-600/30">
+                <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Создать задачу</span>
+            </button>
         </div>
-    </main>
+    </div>
+</header>
 
-    <!-- МОДАЛЬНОЕ ОКНО: РЕДАКТИРОВАНИЕ ЗАДАЧИ -->
-    <div id="edit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden justify-center items-center z-50 p-4">
-        <div id="edit-modal-box" class="bg-[#161f30] border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-xl p-6 relative flex flex-col gap-4 text-slate-200 max-h-[90vh] overflow-y-auto">
-            <button onclick="closeModal('edit-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-rose-400 text-lg transition">&times;</button>
-            
-            <div class="flex items-center justify-between text-xs pr-6">
-                <div class="flex items-center gap-2">
-                    <span id="edit-modal-id" class="mono px-2 py-0.5 bg-slate-800 rounded font-bold text-blue-400">#0</span>
-                    <span id="edit-modal-date" class="text-slate-400 font-mono text-[11px]">Дата: -</span>
-                    <span id="edit-modal-sheet" class="text-slate-400 font-medium">Лист</span>
+<!-- ДОСКА КАНБАН (7 ПОЛНОЦЕННЫХ КОЛОНОК) -->
+<main class="flex-1 p-3 md:p-5 overflow-x-auto w-full">
+    <div class="flex gap-3 w-full min-w-[1300px] items-start">
+        
+        <!-- 1. СОЗДАНО -->
+        <div id="col-wrapper-Создано" class="column-container flex-1 min-w-[175px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
+                <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-slate-300">
+                    <span class="w-2 h-2 rounded-full bg-slate-400"></span> 
+                    <span class="col-label">Создано</span>
                 </div>
-
-                <!-- Блок переноса на другой месяц -->
                 <div class="flex items-center gap-1.5">
-                    <span class="text-slate-400">В месяц:</span>
-                    <select id="move-month-select" class="bg-[#0f172a] border border-slate-700 rounded-lg px-2 py-1 text-xs text-blue-400 font-semibold outline-none"></select>
-                    <button onclick="moveTaskToMonth()" title="Перенести на другой месяц" class="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/40 px-2 py-1 rounded-lg text-xs font-semibold transition">
-                        ➔
-                    </button>
+                    <span id="count-Создано" class="count-badge mono text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700">0</span>
+                    <button onclick="openCreateModal('Создано')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
+                    <button onclick="toggleCollapse('Создано')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
                 </div>
             </div>
+            <div id="Создано" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Создано"></div>
+            
+            <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Создано')" title="Кликните, чтобы развернуть">
+                <span id="collapsed-count-Создано" class="mono text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700">0</span>
+                <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-slate-400">Создано</span>
+                <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+        </div>
 
-            <!-- Срочность -->
-            <div class="bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl flex items-center justify-between">
-                <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-rose-400">
-                    <input type="checkbox" id="edit-modal-urgent" class="w-4 h-4 rounded text-rose-600 bg-slate-900 border-slate-700 focus:ring-0">
-                    🔥 Высокая срочность (Блокер для работы)
+        <!-- 2. В РАБОТЕ -->
+        <div id="col-wrapper-В работе" class="column-container flex-1 min-w-[175px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
+                <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-amber-400">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span> 
+                    <span class="col-label">В работе</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span id="count-В работе" class="count-badge mono text-[11px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/30">0</span>
+                    <button onclick="openCreateModal('В работе')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
+                    <button onclick="toggleCollapse('В работе')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
+                </div>
+            </div>
+            <div id="В работе" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="В работе"></div>
+            
+            <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('В работе')" title="Кликните, чтобы развернуть">
+                <span id="collapsed-count-В работе" class="mono text-[11px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-md border border-amber-500/30">0</span>
+                <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-amber-400">В работе</span>
+                <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+        </div>
+
+        <!-- 3. НА ПАУЗЕ -->
+        <div id="col-wrapper-На паузе" class="column-container flex-1 min-w-[175px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
+                <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-orange-400">
+                    <span class="w-2 h-2 rounded-full bg-orange-400"></span> 
+                    <span class="col-label">На паузе</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span id="count-На паузе" class="count-badge mono text-[11px] bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded-md border border-orange-500/30">0</span>
+                    <button onclick="openCreateModal('На паузе')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
+                    <button onclick="toggleCollapse('На паузе')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
+                </div>
+            </div>
+            <div id="На паузе" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="На паузе"></div>
+            
+            <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('На паузе')" title="Кликните, чтобы развернуть">
+                <span id="collapsed-count-На паузе" class="mono text-[11px] bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded-md border border-orange-500/30">0</span>
+                <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-orange-400">На паузе</span>
+                <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+        </div>
+
+        <!-- 4. ТЕСТ -->
+        <div id="col-wrapper-Тест" class="column-container flex-1 min-w-[175px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
+                <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-purple-400">
+                    <span class="w-2 h-2 rounded-full bg-purple-400"></span> 
+                    <span class="col-label">Тест</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span id="count-Тест" class="count-badge mono text-[11px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded-md border border-purple-500/30">0</span>
+                    <button onclick="openCreateModal('Тест')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
+                    <button onclick="toggleCollapse('Тест')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
+                </div>
+            </div>
+            <div id="Тест" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Тест"></div>
+            
+            <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Тест')" title="Кликните, чтобы развернуть">
+                <span id="collapsed-count-Тест" class="mono text-[11px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded-md border border-purple-500/30">0</span>
+                <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-purple-400">Тест</span>
+                <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+        </div>
+
+        <!-- 5. ГОТОВО В ТЕСТОВОЙ -->
+        <div id="col-wrapper-Готово в тестовой" class="column-container flex-1 min-w-[175px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
+                <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-sky-400">
+                    <span class="w-2 h-2 rounded-full bg-sky-400"></span> 
+                    <span class="col-label">Готово (Тест)</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span id="count-Готово в тестовой" class="count-badge mono text-[11px] bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-md border border-sky-500/30">0</span>
+                    <button onclick="openCreateModal('Готово в тестовой')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
+                    <button onclick="toggleCollapse('Готово в тестовой')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
+                </div>
+            </div>
+            <div id="Готово в тестовой" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Готово в тестовой"></div>
+            
+            <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Готово в тестовой')" title="Кликните, чтобы развернуть">
+                <span id="collapsed-count-Готово в тестовой" class="mono text-[11px] bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-md border border-sky-500/30">0</span>
+                <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-sky-400">Готово (Тест)</span>
+                <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+        </div>
+
+        <!-- 6. ПРОВЕРЕНО -->
+        <div id="col-wrapper-Проверено" class="column-container flex-1 min-w-[175px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
+                <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-indigo-400">
+                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> 
+                    <span class="col-label">Проверено</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span id="count-Проверено" class="count-badge mono text-[11px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/30">0</span>
+                    <button onclick="openCreateModal('Проверено')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
+                    <button onclick="toggleCollapse('Проверено')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
+                </div>
+            </div>
+            <div id="Проверено" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Проверено"></div>
+            
+            <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Проверено')" title="Кликните, чтобы развернуть">
+                <span id="collapsed-count-Проверено" class="mono text-[11px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/30">0</span>
+                <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-indigo-400">Проверено</span>
+                <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+        </div>
+
+        <!-- 7. ГОТОВО В РАБОЧЕЙ -->
+        <div id="col-wrapper-Готово в рабочей" class="column-container flex-1 min-w-[175px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300">
+            <div class="col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80">
+                <div class="col-head-title flex items-center gap-2 font-semibold text-xs tracking-wider uppercase text-emerald-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 
+                    <span class="col-label">В рабочей</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span id="count-Готово в рабочей" class="count-badge mono text-[11px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/30">0</span>
+                    <button onclick="openCreateModal('Готово в рабочей')" class="text-slate-400 hover:text-white text-xs p-1" title="Добавить задачу"><i class="fa-solid fa-plus"></i></button>
+                    <button onclick="toggleCollapse('Готово в рабочей')" class="text-slate-400 hover:text-white text-xs p-1" title="Свернуть колонку"><i class="fa-solid fa-chevron-left"></i></button>
+                </div>
+            </div>
+            <div id="Готово в рабочей" class="kanban-col flex flex-col gap-2.5 mt-2.5 pr-1 min-h-[65vh] max-h-[calc(100vh-175px)] overflow-y-auto" data-status="Готово в рабочей"></div>
+            
+            <div class="collapsed-placeholder hidden flex-col items-center justify-between py-4 h-[65vh] cursor-pointer" onclick="toggleCollapse('Готово в рабочей')" title="Кликните, чтобы развернуть">
+                <span id="collapsed-count-Готово в рабочей" class="mono text-[11px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/30">0</span>
+                <span class="vertical-text text-xs uppercase font-semibold tracking-wider text-emerald-400">В рабочей</span>
+                <i class="fa-solid fa-chevron-right text-xs text-slate-500"></i>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- МОДАЛЬНОЕ ОКНО: РЕДАКТИРОВАНИЕ ЗАДАЧИ -->
+<div id="edit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden justify-center items-center z-50 p-4">
+    <div id="edit-modal-box" class="bg-[#161f30] border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-xl p-6 relative flex flex-col gap-4 text-slate-200 max-h-[90vh] overflow-y-auto">
+        <button onclick="closeModal('edit-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-rose-400 text-lg transition">&times;</button>
+        
+        <div class="flex items-center justify-between text-xs pr-6">
+            <div class="flex items-center gap-2">
+                <span id="edit-modal-id" class="mono px-2 py-0.5 bg-slate-800 rounded font-bold text-blue-400">#0</span>
+                <span id="edit-modal-date" class="text-slate-400 font-mono text-[11px] bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/60">📅 -</span>
+                <span id="edit-modal-sheet" class="text-slate-400 font-medium">Лист</span>
+            </div>
+
+            <!-- Блок переноса на другой месяц -->
+            <div class="flex items-center gap-1.5">
+                <span class="text-slate-400">В месяц:</span>
+                <select id="move-month-select" class="bg-[#0f172a] border border-slate-700 rounded-lg px-2 py-1 text-xs text-blue-400 font-semibold outline-none"></select>
+                <button onclick="moveTaskToMonth()" title="Перенести на другой месяц" class="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/40 px-2 py-1 rounded-lg text-xs font-semibold transition">
+                    ➔
+                </button>
+            </div>
+        </div>
+
+        <!-- Срочность -->
+        <div class="bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl flex items-center justify-between">
+            <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-rose-400">
+                <input type="checkbox" id="edit-modal-urgent" class="w-4 h-4 rounded text-rose-600 bg-slate-900 border-slate-700 focus:ring-0">
+                🔥 Высокая срочность (Блокер для работы)
+            </label>
+        </div>
+
+        <!-- Этапы задачи и чекбокс паузы -->
+        <div class="bg-[#0f172a] border border-slate-700/70 p-3 rounded-xl flex flex-col gap-2">
+            <label class="text-xs font-bold text-slate-300">Этапы выполнения:</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="stage-analysis" class="rounded text-blue-600 bg-slate-900 border-slate-700">
+                    <span>Анализ</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="stage-dev" class="rounded text-blue-600 bg-slate-900 border-slate-700">
+                    <span>Разработка</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="stage-test" class="rounded text-blue-600 bg-slate-900 border-slate-700">
+                    <span>Тест</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer text-amber-400 font-semibold">
+                    <input type="checkbox" id="stage-paused" onchange="toggleBlockerSection(this.checked)" class="rounded text-amber-500 bg-slate-900 border-slate-700">
+                    <span>⏸ На паузе</span>
                 </label>
             </div>
 
-            <!-- Этапы задачи и пауза -->
-            <div class="bg-[#0f172a] border border-slate-700/70 p-3 rounded-xl flex flex-col gap-2">
-                <label class="text-xs font-bold text-slate-300">Этапы выполнения:</label>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="checkbox" id="stage-analysis" class="rounded text-blue-600 bg-slate-900 border-slate-700">
-                        <span>Анализ</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="checkbox" id="stage-dev" class="rounded text-blue-600 bg-slate-900 border-slate-700">
-                        <span>Разработка</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer">
-                        <input type="checkbox" id="stage-test" class="rounded text-blue-600 bg-slate-900 border-slate-700">
-                        <span>Тест</span>
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer text-amber-400 font-semibold">
-                        <input type="checkbox" id="stage-paused" onchange="toggleBlockerSection(this.checked)" class="rounded text-amber-500 bg-slate-900 border-slate-700">
-                        <span>⏸ На паузе</span>
-                    </label>
+            <!-- Поле ввода причины блокера с быстрыми чипсами -->
+            <div id="blocker-section" class="hidden flex-col gap-1.5 pt-2 mt-1 border-t border-slate-800">
+                <label class="text-[11px] font-semibold text-amber-400">Причина паузы (кого/чего ждем?):</label>
+                <input type="text" id="edit-modal-blocker" placeholder="Например: Жду пример файла от менеджера" class="w-full bg-[#161f30] border border-amber-500/40 rounded-xl px-3 py-1.5 text-xs text-amber-200 outline-none focus:border-amber-400">
+                <div class="flex flex-wrap gap-1 mt-1 text-[10px]">
+                    <button type="button" onclick="setBlockerText('Жду ответ / пример от инициатора')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Жду ответ инициатора</button>
+                    <button type="button" onclick="setBlockerText('Нет доступа к рабочей базе / стенду')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Нет доступа к базе</button>
+                    <button type="button" onclick="setBlockerText('Уточнение ТЗ / конфликт логики')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Уточнение ТЗ</button>
                 </div>
-
-                <!-- Поле блокера с быстрыми шаблонами -->
-                <div id="blocker-section" class="hidden flex-col gap-1.5 pt-2 mt-1 border-t border-slate-800">
-                    <label class="text-[11px] font-semibold text-amber-400">Причина паузы (кого/чего ждем?):</label>
-                    <input type="text" id="edit-modal-blocker" placeholder="Например: Жду пример файла от менеджера" class="w-full bg-[#161f30] border border-amber-500/40 rounded-xl px-3 py-1.5 text-xs text-amber-200 outline-none focus:border-amber-400">
-                    <div class="flex flex-wrap gap-1 mt-1 text-[10px]">
-                        <button type="button" onclick="setBlockerText('Жду ответ / пример от инициатора')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Жду ответ инициатора</button>
-                        <button type="button" onclick="setBlockerText('Нет доступа к рабочей базе / стенду')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Нет доступа к базе</button>
-                        <button type="button" onclick="setBlockerText('Уточнение ТЗ / конфликт логики')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Уточнение ТЗ</button>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold mb-1 opacity-90">Название задачи</label>
-                <input type="text" id="edit-modal-title" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500 transition">
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold mb-1 opacity-90">Описание / ТЗ задачи</label>
-                <textarea id="edit-modal-desc" rows="4" placeholder="Вставьте подробности, ТЗ, контекст..." class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition resize-y"></textarea>
-            </div>
-
-            <!-- Доп. поля для выполненных задач -->
-            <div id="edit-extra-fields" class="hidden flex-col gap-3 pt-3 border-t border-slate-700/70">
-                <div>
-                    <label class="block text-xs font-semibold mb-1 opacity-90">Тэг разработчика (например, //ЮАШ++)</label>
-                    <input type="text" id="edit-modal-tag" placeholder="//ЮАШ++" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold mb-1 opacity-90">Где применены изменения</label>
-                    <input type="text" id="edit-modal-changes" placeholder="Документ: Реализация, Модуль объекта..." class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition">
-                </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 pt-2">
-                <button onclick="closeModal('edit-modal')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition">Отмена</button>
-                <button onclick="saveTaskDetails()" id="btn-save-details" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-xs font-semibold shadow-lg transition">
-                    Сохранить изменения
-                </button>
             </div>
         </div>
-    </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО: СОЗДАНИЕ ЗАДАЧИ -->
-    <div id="create-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden justify-center items-center z-50 p-4">
-        <div id="create-modal-box" class="bg-[#161f30] border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative flex flex-col gap-4 text-slate-200">
-            <button onclick="closeModal('create-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-rose-400 text-lg transition">&times;</button>
-            
-            <h3 class="font-bold text-base flex items-center gap-2">
-                <i class="fa-solid fa-circle-plus text-blue-500"></i> Новая задача
-            </h3>
+        <div>
+            <label class="block text-xs font-semibold mb-1 opacity-90">Название задачи</label>
+            <input type="text" id="edit-modal-title" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500 transition">
+        </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold mb-1 opacity-90">Месяц (Лист таблицы)</label>
-                    <select id="new-task-month" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition"></select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold mb-1 opacity-90">Колонка (Статус)</label>
-                    <select id="new-task-status" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition">
-                        <option value="Создано">Создано</option>
-                        <option value="В работе">В работе</option>
-                        <option value="Тест">Тест</option>
-                        <option value="Готово в тестовой">Готово в тестовой</option>
-                        <option value="Проверено">Проверено</option>
-                        <option value="Готово в рабочей">Готово в рабочей</option>
-                    </select>
-                </div>
-            </div>
+        <div>
+            <label class="block text-xs font-semibold mb-1 opacity-90">Описание / ТЗ задачи</label>
+            <textarea id="edit-modal-desc" rows="4" placeholder="Вставьте подробности, ТЗ, контекст..." class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition resize-y"></textarea>
+        </div>
 
-            <!-- Чекбокс срочности при создании -->
-            <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl">
-                <input type="checkbox" id="new-task-urgent" class="w-4 h-4 rounded text-rose-600 bg-slate-900 border-slate-700 focus:ring-0">
-                🔥 Пометить как срочную задачу
-            </label>
-
+        <!-- Доп. поля для выполненных задач -->
+        <div id="edit-extra-fields" class="hidden flex-col gap-3 pt-3 border-t border-slate-700/70">
             <div>
-                <label class="block text-xs font-semibold mb-1 opacity-90">Название задачи *</label>
-                <input type="text" id="new-task-title" placeholder="Краткая формулировка задачи..." class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none focus:border-blue-500 transition">
+                <label class="block text-xs font-semibold mb-1 opacity-90">Тэг разработчика (например, //ЮАШ++)</label>
+                <input type="text" id="edit-modal-tag" placeholder="//ЮАШ++" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition">
             </div>
-
             <div>
-                <label class="block text-xs font-semibold mb-1 opacity-90">Описание / ТЗ</label>
-                <textarea id="new-task-desc" rows="4" placeholder="Вставьте подробности, ТЗ, контекст..." class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition resize-y"></textarea>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 pt-2">
-                <button onclick="closeModal('create-modal')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition">Отмена</button>
-                <button onclick="createNewTask()" id="btn-save-create" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-xs font-semibold shadow-lg transition">
-                    Добавить в таблицу
-                </button>
+                <label class="block text-xs font-semibold mb-1 opacity-90">Где применены изменения</label>
+                <input type="text" id="edit-modal-changes" placeholder="Документ: Реализация, Модуль объекта..." class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition">
             </div>
         </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <button onclick="closeModal('edit-modal')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition">Отмена</button>
+            <button onclick="saveTaskDetails()" id="btn-save-details" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-xs font-semibold shadow-lg transition">
+                Сохранить изменения
+            </button>
+        </div>
     </div>
+</div>
 
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyAvqcGLOttZXJiQn4O7aQ6nv_QjMWkpLqSJ32U00vcTaGCb8SiwOpbbm7E00BeJb4b/exec";
+<!-- МОДАЛЬНОЕ ОКНО: СОЗДАНИЕ ЗАДАЧИ -->
+<div id="create-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden justify-center items-center z-50 p-4">
+    <div id="create-modal-box" class="bg-[#161f30] border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative flex flex-col gap-4 text-slate-200">
+        <button onclick="closeModal('create-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-rose-400 text-lg transition">&times;</button>
+        
+        <h3 class="font-bold text-base flex items-center gap-2">
+            <i class="fa-solid fa-circle-plus text-blue-500"></i> Новая задача
+        </h3>
 
-        let currentTasks = [];
-        let activeTaskId = null;
-        let availableSheets = [];
-        let currentTheme = localStorage.getItem('kanban_theme') || 'linear';
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-semibold mb-1 opacity-90">Месяц (Лист таблицы)</label>
+                <select id="new-task-month" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition"></select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold mb-1 opacity-90">Колонка (Статус)</label>
+                <select id="new-task-status" class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition">
+                    <option value="Создано">Создано</option>
+                    <option value="В работе">В работе</option>
+                    <option value="На паузе">На паузе</option>
+                    <option value="Тест">Тест</option>
+                    <option value="Готово в тестовой">Готово в тестовой</option>
+                    <option value="Проверено">Проверено</option>
+                    <option value="Готово в рабочей">Готово в рабочей</option>
+                </select>
+            </div>
+        </div>
 
-        // Состояние быстрых фильтров
-        let filterUrgent = false;
-        let filterPaused = false;
+        <!-- Чекбокс срочности при создании -->
+        <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl">
+            <input type="checkbox" id="new-task-urgent" class="w-4 h-4 rounded text-rose-600 bg-slate-900 border-slate-700 focus:ring-0">
+            🔥 Пометить как срочную задачу
+        </label>
 
-        // Инициализация Drag and Drop для колонок
-        document.querySelectorAll('.kanban-col').forEach(col => {
-            new Sortable(col, {
-                group: 'kanban',
-                animation: 170,
-                ghostClass: 'sortable-ghost',
-                chosenClass: 'sortable-chosen',
-                onEnd: function (evt) {
-                    const taskId = evt.item.dataset.id;
-                    const newStatus = evt.to.dataset.status;
-                    updateTaskStatus(taskId, newStatus);
+        <div>
+            <label class="block text-xs font-semibold mb-1 opacity-90">Название задачи *</label>
+            <input type="text" id="new-task-title" placeholder="Краткая формулировка задачи..." class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none focus:border-blue-500 transition">
+        </div>
+
+        <div>
+            <label class="block text-xs font-semibold mb-1 opacity-90">Описание / ТЗ</label>
+            <textarea id="new-task-desc" rows="4" placeholder="Вставьте подробности, ТЗ, контекст..." class="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-blue-500 transition resize-y"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <button onclick="closeModal('create-modal')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition">Отмена</button>
+            <button onclick="createNewTask()" id="btn-save-create" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-xs font-semibold shadow-lg transition">
+                Добавить в таблицу
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyAvqcGLOttZXJiQn4O7aQ6nv_QjMWkpLqSJ32U00vcTaGCb8SiwOpbbm7E00BeJb4b/exec";
+
+    let currentTasks = [];
+    let activeTaskId = null;
+    let availableSheets = [];
+    let currentTheme = localStorage.getItem('kanban_theme') || 'linear';
+
+    let filterUrgent = false;
+    let filterPaused = false;
+
+    // Инициализация Drag and Drop для всех 7 колонок
+    document.querySelectorAll('.kanban-col').forEach(col => {
+        new Sortable(col, {
+            group: 'kanban',
+            animation: 170,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: function (evt) {
+                const taskId = evt.item.dataset.id;
+                const newStatus = evt.to.dataset.status;
+                updateTaskStatus(taskId, newStatus);
+            }
+        });
+    });
+
+    function toggleCollapse(status) {
+        const wrapper = document.getElementById('col-wrapper-' + status);
+        const head = wrapper.querySelector('.col-head');
+        const list = document.getElementById(status);
+        const placeholder = wrapper.querySelector('.collapsed-placeholder');
+
+        const isCollapsed = wrapper.classList.contains('is-collapsed');
+
+        if (!isCollapsed) {
+            wrapper.classList.add('is-collapsed');
+            wrapper.classList.remove('flex-1', 'min-w-[175px]', 'p-3');
+            wrapper.classList.add('w-12', 'min-w-[48px]', 'p-2', 'items-center');
+            head.classList.add('hidden');
+            list.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            placeholder.classList.add('flex');
+        } else {
+            wrapper.classList.remove('is-collapsed', 'w-12', 'min-w-[48px]', 'p-2', 'items-center');
+            wrapper.classList.add('flex-1', 'min-w-[175px]', 'p-3');
+            head.classList.remove('hidden');
+            list.classList.remove('hidden');
+            placeholder.classList.remove('flex');
+            placeholder.classList.add('hidden');
+        }
+    }
+
+    function toggleFilter(type) {
+        if (type === 'urgent') {
+            filterUrgent = !filterUrgent;
+            const btn = document.getElementById('filter-urgent-btn');
+            btn.className = filterUrgent 
+                ? "px-2.5 py-1 rounded-lg bg-rose-600 text-white transition flex items-center gap-1 font-semibold"
+                : "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 font-medium";
+        } else if (type === 'paused') {
+            filterPaused = !filterPaused;
+            const btn = document.getElementById('filter-paused-btn');
+            btn.className = filterPaused 
+                ? "px-2.5 py-1 rounded-lg bg-amber-600 text-white transition flex items-center gap-1 font-semibold"
+                : "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 font-medium";
+        }
+        renderBoard();
+    }
+
+    function toggleBlockerSection(isPaused) {
+        const sec = document.getElementById('blocker-section');
+        if (isPaused) {
+            sec.classList.remove('hidden');
+            sec.classList.add('flex');
+        } else {
+            sec.classList.add('hidden');
+            sec.classList.remove('flex');
+        }
+    }
+
+    function setBlockerText(text) {
+        document.getElementById('edit-modal-blocker').value = text;
+    }
+
+    function setTheme(theme) {
+        currentTheme = theme;
+        localStorage.setItem('kanban_theme', theme);
+
+        const body = document.getElementById('page-body');
+        const header = document.getElementById('main-header');
+        const headerTitle = document.getElementById('header-title');
+        const themeBox = document.getElementById('theme-switch-box');
+        const monthFilter = document.getElementById('month-filter');
+        const searchInput = document.getElementById('search-input');
+        const createBtn = document.getElementById('btn-create-task');
+        const refreshBtn = document.getElementById('btn-refresh');
+        const columns = document.querySelectorAll('.column-container');
+        const colHeads = document.querySelectorAll('.col-head');
+
+        body.className = "min-h-screen flex flex-col antialiased transition-colors duration-200";
+
+        ['linear', 'enterprise', 'compact', 'pastel'].forEach(t => {
+            const btn = document.getElementById('btn-theme-' + t);
+            btn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white";
+        });
+        const activeBtn = document.getElementById('btn-theme-' + theme);
+
+        if (theme === 'linear') {
+            body.classList.add("bg-[#0b0f17]", "text-slate-200");
+            header.className = "bg-[#111827] border-b border-slate-800 px-5 py-3 sticky top-0 z-30 shadow-lg";
+            headerTitle.className = "font-bold text-sm tracking-wide text-white";
+            themeBox.className = "flex items-center gap-1 bg-[#0b0f17] p-1 rounded-xl border border-slate-800 text-[11px] flex-wrap";
+            monthFilter.className = "bg-[#1a2333] border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 outline-none cursor-pointer";
+            searchInput.className = "bg-[#1a2333] border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 w-44 md:w-56 outline-none focus:border-blue-500";
+            createBtn.className = "bg-blue-600 hover:bg-blue-500 text-white text-xs px-3.5 py-1.5 rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-blue-600/30";
+            refreshBtn.className = "p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition border border-slate-700";
+            activeBtn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-blue-600 text-white shadow-sm";
+
+            columns.forEach(c => {
+                if (!c.classList.contains('is-collapsed')) {
+                    c.className = "column-container flex-1 min-w-[175px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300";
                 }
             });
+            colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80");
+        } 
+        else if (theme === 'enterprise') {
+            body.classList.add("bg-[#f4f5f7]", "text-slate-800");
+            header.className = "bg-white border-b border-slate-200 px-5 py-3 sticky top-0 z-30 shadow-sm";
+            headerTitle.className = "font-bold text-sm tracking-wide text-slate-800";
+            themeBox.className = "flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-[11px] flex-wrap";
+            monthFilter.className = "bg-white border border-slate-300 text-xs rounded-lg px-2.5 py-1.5 text-slate-700 outline-none cursor-pointer";
+            searchInput.className = "bg-white border border-slate-300 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 w-44 md:w-56 outline-none focus:border-blue-500";
+            createBtn.className = "bg-blue-600 hover:bg-blue-500 text-white text-xs px-3.5 py-1.5 rounded-xl font-semibold flex items-center gap-2 shadow-md";
+            refreshBtn.className = "p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs transition border border-slate-300";
+            activeBtn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-blue-600 text-white shadow-sm";
+
+            columns.forEach(c => {
+                if (!c.classList.contains('is-collapsed')) {
+                    c.className = "column-container flex-1 min-w-[175px] bg-[#ebecf0] rounded-xl border border-slate-300/80 p-3 shadow-sm flex flex-col transition-all duration-300";
+                }
+            });
+            colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-300");
+        } 
+        else if (theme === 'compact') {
+            body.classList.add("bg-[#181c24]", "text-slate-300", "text-xs");
+            header.className = "bg-[#212631] border-b border-slate-700/80 px-4 py-2 sticky top-0 z-30 shadow-md";
+            headerTitle.className = "font-bold text-xs tracking-wider text-slate-100";
+            themeBox.className = "flex items-center gap-1 bg-[#181c24] p-1 rounded-lg border border-slate-700 text-[10px] flex-wrap";
+            monthFilter.className = "bg-[#212631] border border-slate-600 text-[11px] rounded-md px-2 py-1 text-slate-200 outline-none cursor-pointer";
+            searchInput.className = "bg-[#212631] border border-slate-600 rounded-lg pl-7 pr-2 py-1 text-[11px] text-slate-200 placeholder-slate-400 w-40 md:w-48 outline-none";
+            createBtn.className = "bg-blue-600 hover:bg-blue-500 text-white text-[11px] px-3 py-1 rounded-lg font-medium flex items-center gap-1.5 shadow";
+            refreshBtn.className = "p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition border border-slate-700";
+            activeBtn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-blue-600 text-white shadow-sm";
+
+            columns.forEach(c => {
+                if (!c.classList.contains('is-collapsed')) {
+                    c.className = "column-container flex-1 min-w-[170px] bg-[#212631] rounded-lg border border-slate-700/80 p-2 shadow-none flex flex-col transition-all duration-300";
+                }
+            });
+            colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-1.5 px-1 border-b border-slate-700");
+        }
+        else if (theme === 'pastel') {
+            body.classList.add("theme-pastel");
+            header.className = "bg-[#1c2220] border-b border-[#343e3a] px-5 py-3 sticky top-0 z-30 shadow-sm";
+            headerTitle.className = "font-bold text-sm tracking-wide text-[#b5c7bf]";
+            themeBox.className = "flex items-center gap-1 bg-[#151a18] p-1 rounded-xl border border-[#343e3a] text-[11px] flex-wrap";
+            monthFilter.className = "bg-[#232b27] border border-[#3e4b45] text-xs rounded-lg px-2.5 py-1.5 text-[#d1dbd6] outline-none cursor-pointer";
+            searchInput.className = "bg-[#232b27] border border-[#3e4b45] rounded-xl pl-8 pr-3 py-1.5 text-xs text-[#d1dbd6] placeholder-[#798a83] w-44 md:w-56 outline-none focus:border-[#6f8c7f]";
+            createBtn.className = "bg-[#546e62] hover:bg-[#455c51] text-white text-xs px-3.5 py-1.5 rounded-xl font-semibold flex items-center gap-2 shadow-md shadow-[#546e62]/30";
+            refreshBtn.className = "p-2 bg-[#232b27] hover:bg-[#2d3732] text-[#d1dbd6] rounded-xl text-xs transition border border-[#3e4b45]";
+            activeBtn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-[#546e62] text-white shadow-sm";
+
+            columns.forEach(c => {
+                if (!c.classList.contains('is-collapsed')) {
+                    c.className = "column-container flex-1 min-w-[175px] bg-[#1f2623] rounded-2xl border border-[#35403b] p-3 shadow-md flex flex-col transition-all duration-300";
+                }
+            });
+            colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-2.5 px-1 border-b border-[#323d38] text-[#9eb2a8]");
+        }
+
+        renderBoard();
+    }
+
+    async function loadTasks(isManual = false) {
+        if (isManual) setSyncStatus("Загрузка...", "amber");
+        try {
+            const response = await fetch(`${API_URL}?_t=${Date.now()}`);
+            currentTasks = await response.json();
+            
+            populateMonthFilter();
+            renderBoard();
+            setSyncStatus("Синхронизировано", "emerald");
+        } catch (error) {
+            console.error(error);
+            if (isManual) setSyncStatus("Ошибка соединения", "rose");
+        }
+    }
+
+    function setSyncStatus(text, color) {
+        const label = document.getElementById("sync-status");
+        const dot = document.getElementById("sync-dot");
+        label.innerText = text;
+        
+        const colorMap = {
+            emerald: "bg-emerald-500",
+            amber: "bg-amber-500",
+            rose: "bg-rose-500"
+        };
+        dot.className = `w-2.5 h-2.5 rounded-full ${colorMap[color] || 'bg-slate-500'} animate-pulse`;
+    }
+
+    function populateMonthFilter() {
+        const select = document.getElementById("month-filter");
+        const currentSelection = select.value;
+        
+        availableSheets = [...new Set(currentTasks.map(t => t['SheetName']))].filter(Boolean);
+        if (availableSheets.length === 0) availableSheets = ["Сентябрь"];
+
+        select.innerHTML = '<option value="ALL">Все месяцы</option>';
+        availableSheets.forEach(sheet => {
+            const opt = document.createElement("option");
+            opt.value = sheet;
+            opt.innerText = sheet;
+            select.appendChild(opt);
         });
 
-        function toggleCollapse(status) {
-            const wrapper = document.getElementById('col-wrapper-' + status);
-            const head = wrapper.querySelector('.col-head');
-            const list = document.getElementById(status);
-            const placeholder = wrapper.querySelector('.collapsed-placeholder');
+        if (availableSheets.includes(currentSelection) || currentSelection === "ALL") {
+            select.value = currentSelection;
+        }
+    }
 
-            const isCollapsed = wrapper.classList.contains('is-collapsed');
-
-            if (!isCollapsed) {
-                wrapper.classList.add('is-collapsed');
-                wrapper.classList.remove('flex-1', 'min-w-[180px]', 'p-3');
-                wrapper.classList.add('w-12', 'min-w-[48px]', 'p-2', 'items-center');
-                head.classList.add('hidden');
-                list.classList.add('hidden');
-                placeholder.classList.remove('hidden');
-                placeholder.classList.add('flex');
-            } else {
-                wrapper.classList.remove('is-collapsed', 'w-12', 'min-w-[48px]', 'p-2', 'items-center');
-                wrapper.classList.add('flex-1', 'min-w-[180px]', 'p-3');
-                head.classList.remove('hidden');
-                list.classList.remove('hidden');
-                placeholder.classList.remove('flex');
-                placeholder.classList.add('hidden');
+    function formatTaskDate(dateStr) {
+        if (!dateStr) return '';
+        try {
+            if (dateStr.includes('.')) {
+                return dateStr.split(' ')[0];
             }
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return String(dateStr).split(' ')[0];
+            return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+        } catch (e) {
+            return String(dateStr).split(' ')[0];
         }
+    }
 
-        function toggleFilter(type) {
-            if (type === 'urgent') {
-                filterUrgent = !filterUrgent;
-                const btn = document.getElementById('filter-urgent-btn');
-                btn.className = filterUrgent 
-                    ? "px-2.5 py-1 rounded-lg bg-rose-600 text-white transition flex items-center gap-1 font-semibold"
-                    : "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 font-medium";
-            } else if (type === 'paused') {
-                filterPaused = !filterPaused;
-                const btn = document.getElementById('filter-paused-btn');
-                btn.className = filterPaused 
-                    ? "px-2.5 py-1 rounded-lg bg-amber-600 text-white transition flex items-center gap-1 font-semibold"
-                    : "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 font-medium";
-            }
-            renderBoard();
-        }
+    // Переключение этапа прямо с карточки без захода в модальное окно
+    async function toggleStageDirect(event, taskId, stageKey) {
+        event.stopPropagation();
+        const task = currentTasks.find(t => String(t['ID']) === String(taskId));
+        if (!task) return;
 
-        function toggleBlockerSection(isPaused) {
-            const sec = document.getElementById('blocker-section');
-            if (isPaused) {
-                sec.classList.remove('hidden');
-                sec.classList.add('flex');
-            } else {
-                sec.classList.add('hidden');
-                sec.classList.remove('flex');
-            }
-        }
+        let stages = { analysis: false, dev: false, test: false, paused: false };
+        try {
+            stages = typeof task['Этапы'] === 'string' ? JSON.parse(task['Этапы'] || '{}') : (task['Этапы'] || {});
+        } catch (e) {}
 
-        function setBlockerText(text) {
-            document.getElementById('edit-modal-blocker').value = text;
-        }
+        stages[stageKey] = !stages[stageKey];
+        task['Этапы'] = JSON.stringify(stages);
+        renderBoard();
 
-        function setTheme(theme) {
-            currentTheme = theme;
-            localStorage.setItem('kanban_theme', theme);
-
-            const body = document.getElementById('page-body');
-            const header = document.getElementById('main-header');
-            const headerTitle = document.getElementById('header-title');
-            const themeBox = document.getElementById('theme-switch-box');
-            const monthFilter = document.getElementById('month-filter');
-            const searchInput = document.getElementById('search-input');
-            const createBtn = document.getElementById('btn-create-task');
-            const refreshBtn = document.getElementById('btn-refresh');
-            const columns = document.querySelectorAll('.column-container');
-            const colHeads = document.querySelectorAll('.col-head');
-
-            body.className = "min-h-screen flex flex-col antialiased transition-colors duration-200";
-
-            ['linear', 'enterprise', 'compact', 'pastel'].forEach(t => {
-                const btn = document.getElementById('btn-theme-' + t);
-                btn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-white";
+        setSyncStatus("Сохранение...", "amber");
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(task)
             });
-            const activeBtn = document.getElementById('btn-theme-' + theme);
-
-            if (theme === 'linear') {
-                body.classList.add("bg-[#0b0f17]", "text-slate-200");
-                header.className = "bg-[#111827] border-b border-slate-800 px-5 py-3 sticky top-0 z-30 shadow-lg";
-                headerTitle.className = "font-bold text-sm tracking-wide text-white";
-                themeBox.className = "flex items-center gap-1 bg-[#0b0f17] p-1 rounded-xl border border-slate-800 text-[11px] flex-wrap";
-                monthFilter.className = "bg-[#1a2333] border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 outline-none cursor-pointer";
-                searchInput.className = "bg-[#1a2333] border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 w-44 md:w-56 outline-none focus:border-blue-500";
-                createBtn.className = "bg-blue-600 hover:bg-blue-500 text-white text-xs px-3.5 py-1.5 rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-blue-600/30";
-                refreshBtn.className = "p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition border border-slate-700";
-                activeBtn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-blue-600 text-white shadow-sm";
-
-                columns.forEach(c => {
-                    if (!c.classList.contains('is-collapsed')) {
-                        c.className = "column-container flex-1 min-w-[180px] bg-[#111827]/80 rounded-2xl border border-slate-800/90 p-3 shadow-xl flex flex-col transition-all duration-300";
-                    }
-                });
-                colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-800/80");
-            } 
-            else if (theme === 'enterprise') {
-                body.classList.add("bg-[#f4f5f7]", "text-slate-800");
-                header.className = "bg-white border-b border-slate-200 px-5 py-3 sticky top-0 z-30 shadow-sm";
-                headerTitle.className = "font-bold text-sm tracking-wide text-slate-800";
-                themeBox.className = "flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-[11px] flex-wrap";
-                monthFilter.className = "bg-white border border-slate-300 text-xs rounded-lg px-2.5 py-1.5 text-slate-700 outline-none cursor-pointer";
-                searchInput.className = "bg-white border border-slate-300 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 w-44 md:w-56 outline-none focus:border-blue-500";
-                createBtn.className = "bg-blue-600 hover:bg-blue-500 text-white text-xs px-3.5 py-1.5 rounded-xl font-semibold flex items-center gap-2 shadow-md";
-                refreshBtn.className = "p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs transition border border-slate-300";
-                activeBtn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-blue-600 text-white shadow-sm";
-
-                columns.forEach(c => {
-                    if (!c.classList.contains('is-collapsed')) {
-                        c.className = "column-container flex-1 min-w-[180px] bg-[#ebecf0] rounded-xl border border-slate-300/80 p-3 shadow-sm flex flex-col transition-all duration-300";
-                    }
-                });
-                colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-2.5 px-1 border-b border-slate-300");
-            } 
-            else if (theme === 'compact') {
-                body.classList.add("bg-[#181c24]", "text-slate-300", "text-xs");
-                header.className = "bg-[#212631] border-b border-slate-700/80 px-4 py-2 sticky top-0 z-30 shadow-md";
-                headerTitle.className = "font-bold text-xs tracking-wider text-slate-100";
-                themeBox.className = "flex items-center gap-1 bg-[#181c24] p-1 rounded-lg border border-slate-700 text-[10px] flex-wrap";
-                monthFilter.className = "bg-[#212631] border border-slate-600 text-[11px] rounded-md px-2 py-1 text-slate-200 outline-none cursor-pointer";
-                searchInput.className = "bg-[#212631] border border-slate-600 rounded-lg pl-7 pr-2 py-1 text-[11px] text-slate-200 placeholder-slate-400 w-40 md:w-48 outline-none";
-                createBtn.className = "bg-blue-600 hover:bg-blue-500 text-white text-[11px] px-3 py-1 rounded-lg font-medium flex items-center gap-1.5 shadow";
-                refreshBtn.className = "p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition border border-slate-700";
-                activeBtn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-blue-600 text-white shadow-sm";
-
-                columns.forEach(c => {
-                    if (!c.classList.contains('is-collapsed')) {
-                        c.className = "column-container flex-1 min-w-[170px] bg-[#212631] rounded-lg border border-slate-700/80 p-2 shadow-none flex flex-col transition-all duration-300";
-                    }
-                });
-                colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-1.5 px-1 border-b border-slate-700");
-            }
-            else if (theme === 'pastel') {
-                body.classList.add("theme-pastel");
-                header.className = "bg-[#1c2220] border-b border-[#343e3a] px-5 py-3 sticky top-0 z-30 shadow-sm";
-                headerTitle.className = "font-bold text-sm tracking-wide text-[#b5c7bf]";
-                themeBox.className = "flex items-center gap-1 bg-[#151a18] p-1 rounded-xl border border-[#343e3a] text-[11px] flex-wrap";
-                monthFilter.className = "bg-[#232b27] border border-[#3e4b45] text-xs rounded-lg px-2.5 py-1.5 text-[#d1dbd6] outline-none cursor-pointer";
-                searchInput.className = "bg-[#232b27] border border-[#3e4b45] rounded-xl pl-8 pr-3 py-1.5 text-xs text-[#d1dbd6] placeholder-[#798a83] w-44 md:w-56 outline-none focus:border-[#6f8c7f]";
-                createBtn.className = "bg-[#546e62] hover:bg-[#455c51] text-white text-xs px-3.5 py-1.5 rounded-xl font-semibold flex items-center gap-2 shadow-md shadow-[#546e62]/30";
-                refreshBtn.className = "p-2 bg-[#232b27] hover:bg-[#2d3732] text-[#d1dbd6] rounded-xl text-xs transition border border-[#3e4b45]";
-                activeBtn.className = "px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1.5 bg-[#546e62] text-white shadow-sm";
-
-                columns.forEach(c => {
-                    if (!c.classList.contains('is-collapsed')) {
-                        c.className = "column-container flex-1 min-w-[180px] bg-[#1f2623] rounded-2xl border border-[#35403b] p-3 shadow-md flex flex-col transition-all duration-300";
-                    }
-                });
-                colHeads.forEach(ch => ch.className = "col-head flex items-center justify-between pb-2.5 px-1 border-b border-[#323d38] text-[#9eb2a8]");
-            }
-
-            renderBoard();
+            setSyncStatus("Синхронизировано", "emerald");
+        } catch (e) {
+            setSyncStatus("Ошибка сохранения", "rose");
         }
+    }
 
-        // Загрузка задач с анти-кеш параметром
-        async function loadTasks(isManual = false) {
-            if (isManual) setSyncStatus("Загрузка...", "amber");
-            try {
-                const response = await fetch(`${API_URL}?_t=${Date.now()}`);
-                currentTasks = await response.json();
-                
-                populateMonthFilter();
-                renderBoard();
-                setSyncStatus("Синхронизировано", "emerald");
-            } catch (error) {
-                console.error(error);
-                if (isManual) setSyncStatus("Ошибка соединения", "rose");
-            }
-        }
+    function renderBoard() {
+        document.querySelectorAll('.kanban-col').forEach(col => col.innerHTML = '');
+        const counts = { 
+            "Создано": 0, 
+            "В работе": 0, 
+            "На паузе": 0, 
+            "Тест": 0, 
+            "Готово в тестовой": 0, 
+            "Проверено": 0, 
+            "Готово в рабочей": 0 
+        };
+        
+        const selectedMonth = document.getElementById("month-filter").value;
+        const query = (document.getElementById("search-input").value || "").toLowerCase().trim();
 
-        function setSyncStatus(text, color) {
-            const label = document.getElementById("sync-status");
-            const dot = document.getElementById("sync-dot");
-            label.innerText = text;
-            
-            const colorMap = {
-                emerald: "bg-emerald-500",
-                amber: "bg-amber-500",
-                rose: "bg-rose-500"
-            };
-            dot.className = `w-2.5 h-2.5 rounded-full ${colorMap[color] || 'bg-slate-500'} animate-pulse`;
-        }
+        currentTasks.forEach(task => {
+            if (selectedMonth !== "ALL" && task['SheetName'] !== selectedMonth) return;
 
-        function populateMonthFilter() {
-            const select = document.getElementById("month-filter");
-            const currentSelection = select.value;
-            
-            availableSheets = [...new Set(currentTasks.map(t => t['SheetName']))].filter(Boolean);
-            if (availableSheets.length === 0) availableSheets = ["Сентябрь"];
-
-            select.innerHTML = '<option value="ALL">Все месяцы</option>';
-            availableSheets.forEach(sheet => {
-                const opt = document.createElement("option");
-                opt.value = sheet;
-                opt.innerText = sheet;
-                select.appendChild(opt);
-            });
-
-            if (availableSheets.includes(currentSelection) || currentSelection === "ALL") {
-                select.value = currentSelection;
-            }
-        }
-
-        // Расчет возраста задачи
-        function formatTaskAge(dateStr) {
-            if (!dateStr) return '';
-            try {
-                // Ожидаемый формат: "DD.MM.YYYY HH:mm" или Date string
-                let taskDate;
-                if (dateStr.includes('.')) {
-                    const parts = dateStr.split(' ')[0].split('.');
-                    taskDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                } else {
-                    taskDate = new Date(dateStr);
-                }
-
-                if (isNaN(taskDate.getTime())) return String(dateStr).split(' ')[0];
-
-                const now = new Date();
-                const diffMs = now - taskDate;
-                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-                const dateFormatted = `${String(taskDate.getDate()).padStart(2, '0')}.${String(taskDate.getMonth() + 1).padStart(2, '0')}`;
-                if (diffDays <= 0) return `${dateFormatted} (сегодня)`;
-                if (diffDays === 1) return `${dateFormatted} (вчера)`;
-                return `${dateFormatted} (${diffDays} дн.)`;
-            } catch (e) {
-                return String(dateStr).split(' ')[0];
-            }
-        }
-
-        // Отрисовка задач в колонках
-        function renderBoard() {
-            document.querySelectorAll('.kanban-col').forEach(col => col.innerHTML = '');
-            const counts = { 
-                "Создано": 0, 
-                "В работе": 0, 
-                "Тест": 0, 
-                "Готово в тестовой": 0, 
-                "Проверено": 0, 
-                "Готово в рабочей": 0 
-            };
-            
-            const selectedMonth = document.getElementById("month-filter").value;
-            const query = (document.getElementById("search-input").value || "").toLowerCase().trim();
-
-            currentTasks.forEach(task => {
-                if (selectedMonth !== "ALL" && task['SheetName'] !== selectedMonth) return;
-
-                // Парсинг этапов
-                let stages = { analysis: false, dev: false, test: false, paused: false };
-                try {
-                    stages = typeof task['Этапы'] === 'string' ? JSON.parse(task['Этапы'] || '{}') : (task['Этапы'] || {});
-                } catch (e) {}
-
-                const isUrgent = task['Срочность'] === true || task['Срочность'] === 'true' || task['Срочность'] === 1;
-                const isPaused = stages.paused === true;
-
-                // Применение фильтров шапки
-                if (filterUrgent && !isUrgent) return;
-                if (filterPaused && !isPaused) return;
-
-                const taskIdStr = String(task['ID'] || '');
-                const titleStr = String(task['Задача'] || '').toLowerCase();
-                const descStr = String(task['Описание'] || '').toLowerCase();
-                const blockerStr = String(task['Блокер'] || '').toLowerCase();
-
-                if (query && !titleStr.includes(query) && !taskIdStr.includes(query) && !descStr.includes(query) && !blockerStr.includes(query)) {
-                    return;
-                }
-
-                let status = task['Статус'] || 'Создано';
-                if (!counts.hasOwnProperty(status)) status = 'Создано';
-
-                const isNew = !localStorage.getItem('seen_' + task['ID']);
-                const card = document.createElement('div');
-                card.dataset.id = task['ID'];
-
-                const tagBadge = task['Тэг'] ? `<span class="mono text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded">${task['Тэг']}</span>` : '';
-                const newBadge = isNew ? `<span class="text-[9px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse">New</span>` : '';
-                const urgentBadge = isUrgent ? `<span class="text-[9px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-1.5 py-0.5 rounded font-bold flex items-center gap-1"><i class="fa-solid fa-fire"></i> Срочно</span>` : '';
-                const hasDescIcon = task['Описание'] ? `<i class="fa-solid fa-align-left text-[10px] opacity-60" title="Есть описание"></i>` : '';
-                const dateText = formatTaskAge(task['Дата']);
-
-                // HTML индикаторов этапов
-                const stagesHtml = `
-                    <div class="flex items-center gap-1 mt-2 text-[9px] font-mono">
-                        <span class="stage-pill ${stages.analysis ? 'stage-pill-active' : 'stage-pill-inactive'}">АН</span>
-                        <span class="text-slate-600">›</span>
-                        <span class="stage-pill ${stages.dev ? 'stage-pill-active' : 'stage-pill-inactive'}">РАЗ</span>
-                        <span class="text-slate-600">›</span>
-                        <span class="stage-pill ${stages.test ? 'stage-pill-active' : 'stage-pill-inactive'}">ТЕСТ</span>
-                    </div>
-                `;
-
-                // Плашка блокера при паузе
-                const blockerHtml = isPaused ? `
-                    <div class="mt-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] px-2 py-1 rounded-lg flex items-start gap-1.5 leading-snug">
-                        <i class="fa-solid fa-pause mt-0.5 text-[9px]"></i>
-                        <span class="truncate"><b>Пауза:</b> ${task['Блокер'] || 'Ожидание ответа'}</span>
-                    </div>
-                ` : '';
-
-                if (currentTheme === 'linear') {
-                    card.className = `card-item bg-[#161f30] hover:bg-[#1c273d] border border-slate-800/90 hover:border-slate-700 p-3 rounded-xl transition cursor-grab shadow-sm group select-none ${isUrgent ? 'card-urgent-border' : ''}`;
-                    card.innerHTML = `
-                        <div class="flex items-center justify-between mb-1.5">
-                            <span class="mono text-[11px] text-blue-400 font-semibold">#${task['ID']}</span>
-                            <div class="flex items-center gap-1.5">${hasDescIcon}${urgentBadge}${newBadge}</div>
-                        </div>
-                        <h4 class="card-title text-xs font-semibold text-slate-200 group-hover:text-blue-300 transition leading-snug line-clamp-3">
-                            ${task['Задача'] || 'Без названия'}
-                        </h4>
-                        ${stagesHtml}
-                        ${blockerHtml}
-                        <div class="card-meta mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
-                            <span class="truncate max-w-[120px]"><i class="fa-regular fa-calendar text-[9px] mr-1"></i>${dateText}</span>
-                            ${tagBadge || `<span class="opacity-60">${task['SheetName'] || ''}</span>`}
-                        </div>
-                    `;
-                } 
-                else if (currentTheme === 'enterprise') {
-                    card.className = `card-item bg-white hover:bg-slate-50 border border-slate-200 p-3 rounded-lg transition cursor-grab shadow-sm hover:shadow-md group select-none ${isUrgent ? 'card-urgent-border' : ''}`;
-                    card.innerHTML = `
-                        <div class="flex items-center justify-between mb-1.5">
-                            <span class="mono text-[11px] text-blue-600 font-bold">#${task['ID']}</span>
-                            <div class="flex items-center gap-1.5">${hasDescIcon}${urgentBadge}${newBadge}</div>
-                        </div>
-                        <h4 class="card-title text-xs font-semibold text-slate-800 group-hover:text-blue-600 transition leading-snug line-clamp-3">
-                            ${task['Задача'] || 'Без названия'}
-                        </h4>
-                        ${stagesHtml}
-                        ${blockerHtml}
-                        <div class="card-meta mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
-                            <span class="truncate max-w-[120px]"><i class="fa-regular fa-calendar text-[9px] mr-1"></i>${dateText}</span>
-                            ${tagBadge || `<span class="opacity-60">${task['SheetName'] || ''}</span>`}
-                        </div>
-                    `;
-                }
-                else if (currentTheme === 'compact') {
-                    card.className = `card-item bg-[#1a1f29] hover:bg-[#252c3a] border border-slate-700/60 p-2 rounded-md transition cursor-grab shadow-xs group select-none ${isUrgent ? 'card-urgent-border' : ''}`;
-                    card.innerHTML = `
-                        <div class="flex items-center justify-between gap-1 mb-1">
-                            <span class="mono text-[10px] text-blue-400 font-semibold">#${task['ID']}</span>
-                            <div class="flex items-center gap-1">${urgentBadge}${hasDescIcon}${newBadge}</div>
-                        </div>
-                        <h4 class="card-title text-[11px] font-medium text-slate-200 group-hover:text-blue-300 transition leading-tight truncate" title="${task['Задача'] || ''}">
-                            ${task['Задача'] || 'Без названия'}
-                        </h4>
-                        ${blockerHtml}
-                    `;
-                }
-                else if (currentTheme === 'pastel') {
-                    card.className = `card-item bg-[#181e1b] hover:bg-[#1e2522] border border-[#313b37] p-3 rounded-xl transition cursor-grab shadow-sm group select-none ${isUrgent ? 'card-urgent-border' : ''}`;
-                    card.innerHTML = `
-                        <div class="flex items-center justify-between mb-1.5">
-                            <span class="mono text-[11px] text-[#7ea191] font-bold">#${task['ID']}</span>
-                            <div class="flex items-center gap-1.5">${hasDescIcon}${urgentBadge}${newBadge}</div>
-                        </div>
-                        <h4 class="card-title text-xs font-semibold text-[#d5ded9] group-hover:text-[#9bc2af] transition leading-snug line-clamp-3">
-                            ${task['Задача'] || 'Без названия'}
-                        </h4>
-                        ${stagesHtml}
-                        ${blockerHtml}
-                        <div class="card-meta mt-2.5 pt-2 border-t border-[#2a332f] flex items-center justify-between text-[10px] text-[#809189]">
-                            <span class="truncate max-w-[120px]"><i class="fa-regular fa-calendar text-[9px] mr-1"></i>${dateText}</span>
-                            ${tagBadge || `<span class="opacity-60">${task['SheetName'] || ''}</span>`}
-                        </div>
-                    `;
-                }
-
-                card.onclick = () => openEditModal(task);
-                const colEl = document.getElementById(status);
-                if (colEl) colEl.appendChild(card);
-                counts[status]++;
-
-                localStorage.setItem('seen_' + task['ID'], 'true');
-            });
-
-            Object.keys(counts).forEach(key => {
-                const el = document.getElementById("count-" + key);
-                const collapsedEl = document.getElementById("collapsed-count-" + key);
-                if (el) el.innerText = counts[key];
-                if (collapsedEl) collapsedEl.innerText = counts[key];
-            });
-        }
-
-        // Обновление статуса в Google Sheets при DnD
-        async function updateTaskStatus(taskId, newStatus) {
-            setSyncStatus("Сохранение...", "amber");
-            const task = currentTasks.find(t => String(t['ID']) === String(taskId));
-            if (task) {
-                task['Статус'] = newStatus;
-                renderBoard();
-
-                try {
-                    await fetch(API_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            ID: task['ID'],
-                            SheetName: task['SheetName'],
-                            Статус: task['Статус'],
-                            Задача: task['Задача'],
-                            Описание: task['Описание'] || "",
-                            Тэг: task['Тэг'] || "",
-                            Изменения: task['Изменения'] || "",
-                            Срочность: task['Срочность'] || false,
-                            Этапы: task['Этапы'] || "{}",
-                            Блокер: task['Блокер'] || ""
-                        })
-                    });
-                    setSyncStatus("Синхронизировано", "emerald");
-                } catch (err) {
-                    setSyncStatus("Ошибка сохранения", "rose");
-                }
-            }
-        }
-
-        // Модальное окно редактирования задачи
-        function openEditModal(task) {
-            activeTaskId = task['ID'];
-            document.getElementById('edit-modal-id').innerText = '#' + task['ID'];
-            document.getElementById('edit-modal-sheet').innerText = task['SheetName'] || 'Лист';
-            document.getElementById('edit-modal-date').innerText = task['Дата'] ? 'Дата: ' + task['Дата'] : '';
-            document.getElementById('edit-modal-title').value = task['Задача'] || '';
-            document.getElementById('edit-modal-desc').value = task['Описание'] || '';
-            document.getElementById('edit-modal-urgent').checked = (task['Срочность'] === true || task['Срочность'] === 'true' || task['Срочность'] === 1);
-
-            // Заполнение этапов
             let stages = { analysis: false, dev: false, test: false, paused: false };
             try {
                 stages = typeof task['Этапы'] === 'string' ? JSON.parse(task['Этапы'] || '{}') : (task['Этапы'] || {});
             } catch (e) {}
 
-            document.getElementById('stage-analysis').checked = !!stages.analysis;
-            document.getElementById('stage-dev').checked = !!stages.dev;
-            document.getElementById('stage-test').checked = !!stages.test;
-            document.getElementById('stage-paused').checked = !!stages.paused;
-            toggleBlockerSection(!!stages.paused);
+            const isUrgent = task['Срочность'] === true || task['Срочность'] === 'true' || task['Срочность'] === 1;
+            let status = task['Статус'] || 'Создано';
 
-            document.getElementById('edit-modal-blocker').value = task['Блокер'] || '';
+            const isPaused = (status === 'На паузе') || (stages.paused === true);
 
-            populateMoveMonthOptions(task['SheetName']);
+            if (filterUrgent && !isUrgent) return;
+            if (filterPaused && !isPaused) return;
 
-            const extraFields = document.getElementById('edit-extra-fields');
-            if (task['Статус'] === 'Готово в тестовой' || task['Статус'] === 'Проверено' || task['Статус'] === 'Готово в рабочей') {
-                extraFields.classList.remove('hidden');
-                extraFields.classList.add('flex');
-                document.getElementById('edit-modal-tag').value = task['Тэг'] || '';
-                document.getElementById('edit-modal-changes').value = task['Изменения'] || '';
-            } else {
-                extraFields.classList.add('hidden');
-                extraFields.classList.remove('flex');
-            }
+            const taskIdStr = String(task['ID'] || '');
+            const titleStr = String(task['Задача'] || '').toLowerCase();
+            const descStr = String(task['Описание'] || '').toLowerCase();
+            const blockerStr = String(task['Блокер'] || '').toLowerCase();
 
-            const modal = document.getElementById('edit-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function populateMoveMonthOptions(currentSheet) {
-            const select = document.getElementById('move-month-select');
-            select.innerHTML = '';
-
-            const allMonths = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-            const list = [...new Set([...availableSheets, ...allMonths])];
-
-            list.forEach(m => {
-                if (m !== currentSheet) {
-                    const opt = document.createElement("option");
-                    opt.value = m;
-                    opt.innerText = m;
-                    select.appendChild(opt);
-                }
-            });
-
-            const customOpt = document.createElement("option");
-            customOpt.value = "__NEW__";
-            customOpt.innerText = "+ Другой месяц...";
-            select.appendChild(customOpt);
-        }
-
-        // Перенос задачи на другой месяц
-        async function moveTaskToMonth() {
-            let target = document.getElementById('move-month-select').value;
-            if (target === "__NEW__") {
-                const promptName = prompt("Введите название нового месяца (листа):");
-                if (!promptName || !promptName.trim()) return;
-                target = promptName.trim();
-            }
-
-            const task = currentTasks.find(t => String(t['ID']) === String(activeTaskId));
-            if (!task) return;
-
-            const oldSheet = task['SheetName'];
-            if (confirm(`Перенести задачу #${task['ID']} из «${oldSheet}» в «${target}»?`)) {
-                setSyncStatus("Перенос задачи...", "amber");
-                task['SheetName'] = target;
-                task['Месяц'] = target;
-
-                closeModal('edit-modal');
-                if (!availableSheets.includes(target)) {
-                    availableSheets.push(target);
-                    populateMonthFilter();
-                }
-                renderBoard();
-
-                try {
-                    await fetch(API_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            Action: "MOVE_MONTH",
-                            ID: task['ID'],
-                            SheetName: oldSheet,
-                            TargetSheetName: target,
-                            Задача: task['Задача'],
-                            Описание: task['Описание'] || "",
-                            Статус: task['Статус'] || "Создано",
-                            Тэг: task['Тэг'] || "",
-                            Изменения: task['Изменения'] || "",
-                            Срочность: task['Срочность'] || false,
-                            Этапы: task['Этапы'] || "{}",
-                            Блокер: task['Блокер'] || ""
-                        })
-                    });
-                    setSyncStatus("Синхронизировано", "emerald");
-                } catch (err) {
-                    setSyncStatus("Ошибка переноса", "rose");
-                }
-            }
-        }
-
-        async function saveTaskDetails() {
-            const task = currentTasks.find(t => String(t['ID']) === String(activeTaskId));
-            if (task) {
-                task['Задача'] = document.getElementById('edit-modal-title').value;
-                task['Описание'] = document.getElementById('edit-modal-desc').value;
-                task['Срочность'] = document.getElementById('edit-modal-urgent').checked;
-
-                const stages = {
-                    analysis: document.getElementById('stage-analysis').checked,
-                    dev: document.getElementById('stage-dev').checked,
-                    test: document.getElementById('stage-test').checked,
-                    paused: document.getElementById('stage-paused').checked
-                };
-                task['Этапы'] = JSON.stringify(stages);
-                task['Блокер'] = stages.paused ? document.getElementById('edit-modal-blocker').value.trim() : "";
-
-                if (task['Статус'] === 'Готово в тестовой' || task['Статус'] === 'Проверено' || task['Статус'] === 'Готово в рабочей') {
-                    task['Тэг'] = document.getElementById('edit-modal-tag').value;
-                    task['Изменения'] = document.getElementById('edit-modal-changes').value;
-                }
-
-                closeModal('edit-modal');
-                renderBoard();
-                setSyncStatus("Сохранение...", "amber");
-
-                try {
-                    await fetch(API_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(task)
-                    });
-                    setSyncStatus("Синхронизировано", "emerald");
-                } catch (e) {
-                    setSyncStatus("Ошибка сохранения", "rose");
-                }
-            }
-        }
-
-        // Модальное окно создания новой задачи
-        function openCreateModal(defaultStatus = 'Создано') {
-            const monthSelect = document.getElementById('new-task-month');
-            monthSelect.innerHTML = '';
-            
-            const currentFilter = document.getElementById("month-filter").value;
-            availableSheets.forEach(sheet => {
-                const opt = document.createElement("option");
-                opt.value = sheet;
-                opt.innerText = sheet;
-                if (currentFilter !== 'ALL' && currentFilter === sheet) opt.selected = true;
-                monthSelect.appendChild(opt);
-            });
-
-            document.getElementById('new-task-status').value = defaultStatus;
-            document.getElementById('new-task-title').value = '';
-            document.getElementById('new-task-desc').value = '';
-            document.getElementById('new-task-urgent').checked = false;
-
-            const modal = document.getElementById('create-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => document.getElementById('new-task-title').focus(), 50);
-        }
-
-        async function createNewTask() {
-            const title = document.getElementById('new-task-title').value.trim();
-            if (!title) {
-                alert('Пожалуйста, укажите название задачи');
+            if (query && !titleStr.includes(query) && !taskIdStr.includes(query) && !descStr.includes(query) && !blockerStr.includes(query)) {
                 return;
             }
 
-            const month = document.getElementById('new-task-month').value || availableSheets[0] || 'Сентябрь';
-            const status = document.getElementById('new-task-status').value;
-            const desc = document.getElementById('new-task-desc').value.trim();
-            const isUrgent = document.getElementById('new-task-urgent').checked;
+            if (!counts.hasOwnProperty(status)) status = 'Создано';
 
-            const maxId = currentTasks.reduce((max, t) => {
-                const idNum = parseInt(t['ID'], 10);
-                return !isNaN(idNum) && idNum > max ? idNum : max;
-            }, 0);
-            const newId = maxId + 1;
+            const isNew = !localStorage.getItem('seen_' + task['ID']);
+            const card = document.createElement('div');
+            card.dataset.id = task['ID'];
 
-            const now = new Date();
-            const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const tagBadge = task['Тэг'] ? `<span class="mono text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded">${task['Тэг']}</span>` : '';
+            const newBadge = isNew ? `<span class="text-[9px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse">New</span>` : '';
+            const urgentBadge = isUrgent ? `<span class="text-[9px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-1.5 py-0.5 rounded font-bold flex items-center gap-1"><i class="fa-solid fa-fire"></i> Срочно</span>` : '';
+            const hasDescIcon = task['Описание'] ? `<i class="fa-solid fa-align-left text-[10px] opacity-60" title="Есть описание"></i>` : '';
+            
+            const dateVal = task['Дата'] ? formatTaskDate(task['Дата']) : 'Без даты';
 
-            const newTask = {
-                ID: newId,
-                Дата: dateStr,
-                SheetName: month,
-                Месяц: month,
-                Квартал: 'Q3',
-                Задача: title,
-                Описание: desc,
-                Статус: status,
-                Тэг: '',
-                Изменения: '',
-                Срочность: isUrgent,
-                Этапы: JSON.stringify({ analysis: false, dev: false, test: false, paused: false }),
-                Блокер: ''
-            };
+            // Широкие интерактивные кнопки этапов
+            const stagesHtml = `
+                <div class="flex items-center gap-1.5 mt-2.5">
+                    <div onclick="toggleStageDirect(event, '${task['ID']}', 'analysis')" title="Нажмите для переключения" class="stage-btn ${stages.analysis ? 'stage-btn-active' : 'stage-btn-inactive'}">АНАЛИЗ</div>
+                    <div onclick="toggleStageDirect(event, '${task['ID']}', 'dev')" title="Нажмите для переключения" class="stage-btn ${stages.dev ? 'stage-btn-active' : 'stage-btn-inactive'}">РАЗРАБОТКА</div>
+                    <div onclick="toggleStageDirect(event, '${task['ID']}', 'test')" title="Нажмите для переключения" class="stage-btn ${stages.test ? 'stage-btn-active' : 'stage-btn-inactive'}">ТЕСТ</div>
+                </div>
+            `;
 
-            currentTasks.unshift(newTask);
-            closeModal('create-modal');
+            // Плашка блокера, если есть причина или статус На паузе
+            const blockerHtml = (isPaused || task['Блокер']) ? `
+                <div class="mt-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] px-2 py-1 rounded-lg flex items-start gap-1.5 leading-snug">
+                    <i class="fa-solid fa-pause mt-0.5 text-[9px]"></i>
+                    <span class="truncate"><b>Пауза:</b> ${task['Блокер'] || 'Ожидание данных'}</span>
+                </div>
+            ` : '';
+
+            if (currentTheme === 'linear') {
+                card.className = `card-item bg-[#161f30] hover:bg-[#1c273d] border border-slate-800/90 hover:border-slate-700 p-3 rounded-xl transition cursor-grab shadow-sm group select-none ${isUrgent ? 'card-urgent-border' : ''}`;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="mono text-[11px] text-blue-400 font-semibold">#${task['ID']}</span>
+                        <div class="flex items-center gap-1.5">${hasDescIcon}${urgentBadge}${newBadge}</div>
+                    </div>
+                    <h4 class="card-title text-xs font-semibold text-slate-200 group-hover:text-blue-300 transition leading-snug line-clamp-3">
+                        ${task['Задача'] || 'Без названия'}
+                    </h4>
+                    ${stagesHtml}
+                    ${blockerHtml}
+                    <div class="card-meta mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                        <span class="truncate max-w-[130px] font-mono"><i class="fa-regular fa-calendar text-[9px] mr-1"></i>${dateVal}</span>
+                        ${tagBadge || `<span class="opacity-60">${task['SheetName'] || ''}</span>`}
+                    </div>
+                `;
+            } 
+            else if (currentTheme === 'enterprise') {
+                card.className = `card-item bg-white hover:bg-slate-50 border border-slate-200 p-3 rounded-lg transition cursor-grab shadow-sm hover:shadow-md group select-none ${isUrgent ? 'card-urgent-border' : ''}`;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="mono text-[11px] text-blue-600 font-bold">#${task['ID']}</span>
+                        <div class="flex items-center gap-1.5">${hasDescIcon}${urgentBadge}${newBadge}</div>
+                    </div>
+                    <h4 class="card-title text-xs font-semibold text-slate-800 group-hover:text-blue-600 transition leading-snug line-clamp-3">
+                        ${task['Задача'] || 'Без названия'}
+                    </h4>
+                    ${stagesHtml}
+                    ${blockerHtml}
+                    <div class="card-meta mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+                        <span class="truncate max-w-[130px] font-mono"><i class="fa-regular fa-calendar text-[9px] mr-1"></i>${dateVal}</span>
+                        ${tagBadge || `<span class="opacity-60">${task['SheetName'] || ''}</span>`}
+                    </div>
+                `;
+            }
+            else if (currentTheme === 'compact') {
+                card.className = `card-item bg-[#1a1f29] hover:bg-[#252c3a] border border-slate-700/60 p-2 rounded-md transition cursor-grab shadow-xs group select-none ${isUrgent ? 'card-urgent-border' : ''}`;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="mono text-[10px] text-blue-400 font-semibold">#${task['ID']}</span>
+                        <div class="flex items-center gap-1">${urgentBadge}${hasDescIcon}${newBadge}</div>
+                    </div>
+                    <h4 class="card-title text-[11px] font-medium text-slate-200 group-hover:text-blue-300 transition leading-tight truncate" title="${task['Задача'] || ''}">
+                        ${task['Задача'] || 'Без названия'}
+                    </h4>
+                    ${stagesHtml}
+                    ${blockerHtml}
+                `;
+            }
+            else if (currentTheme === 'pastel') {
+                card.className = `card-item bg-[#181e1b] hover:bg-[#1e2522] border border-[#313b37] p-3 rounded-xl transition cursor-grab shadow-sm group select-none ${isUrgent ? 'card-urgent-border' : ''}`;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="mono text-[11px] text-[#7ea191] font-bold">#${task['ID']}</span>
+                        <div class="flex items-center gap-1.5">${hasDescIcon}${urgentBadge}${newBadge}</div>
+                    </div>
+                    <h4 class="card-title text-xs font-semibold text-[#d5ded9] group-hover:text-[#9bc2af] transition leading-snug line-clamp-3">
+                        ${task['Задача'] || 'Без названия'}
+                    </h4>
+                    ${stagesHtml}
+                    ${blockerHtml}
+                    <div class="card-meta mt-2.5 pt-2 border-t border-[#2a332f] flex items-center justify-between text-[10px] text-[#809189]">
+                        <span class="truncate max-w-[130px] font-mono"><i class="fa-regular fa-calendar text-[9px] mr-1"></i>${dateVal}</span>
+                        ${tagBadge || `<span class="opacity-60">${task['SheetName'] || ''}</span>`}
+                    </div>
+                `;
+            }
+
+            card.onclick = () => openEditModal(task);
+            const colEl = document.getElementById(status);
+            if (colEl) colEl.appendChild(card);
+            counts[status]++;
+
+            localStorage.setItem('seen_' + task['ID'], 'true');
+        });
+
+        Object.keys(counts).forEach(key => {
+            const el = document.getElementById("count-" + key);
+            const collapsedEl = document.getElementById("collapsed-count-" + key);
+            if (el) el.innerText = counts[key];
+            if (collapsedEl) collapsedEl.innerText = counts[key];
+        });
+    }
+
+    async function updateTaskStatus(taskId, newStatus) {
+        setSyncStatus("Сохранение...", "amber");
+        const task = currentTasks.find(t => String(t['ID']) === String(taskId));
+        if (task) {
+            task['Статус'] = newStatus;
+
+            if (newStatus === 'На паузе') {
+                let stages = { analysis: false, dev: false, test: false, paused: false };
+                try {
+                    stages = typeof task['Этапы'] === 'string' ? JSON.parse(task['Этапы'] || '{}') : (task['Этапы'] || {});
+                } catch (e) {}
+                stages.paused = true;
+                task['Этапы'] = JSON.stringify(stages);
+            }
+
             renderBoard();
 
-            setSyncStatus("Добавление...", "amber");
             try {
                 await fetch(API_URL, {
                     method: 'POST',
-                    body: JSON.stringify(newTask)
+                    body: JSON.stringify({
+                        ID: task['ID'],
+                        Дата: task['Дата'] || "",
+                        SheetName: task['SheetName'],
+                        Статус: task['Статус'],
+                        Задача: task['Задача'],
+                        Описание: task['Описание'] || "",
+                        Тэг: task['Тэг'] || "",
+                        Изменения: task['Изменения'] || "",
+                        Срочность: task['Срочность'] || false,
+                        Этапы: task['Этапы'] || "{}",
+                        Блокер: task['Блокер'] || ""
+                    })
+                });
+                setSyncStatus("Синхронизировано", "emerald");
+            } catch (err) {
+                setSyncStatus("Ошибка сохранения", "rose");
+            }
+        }
+    }
+
+    function openEditModal(task) {
+        activeTaskId = task['ID'];
+        document.getElementById('edit-modal-id').innerText = '#' + task['ID'];
+        document.getElementById('edit-modal-sheet').innerText = task['SheetName'] || 'Лист';
+        document.getElementById('edit-modal-date').innerText = task['Дата'] ? '📅 ' + formatTaskDate(task['Дата']) : '📅 Без даты';
+        document.getElementById('edit-modal-title').value = task['Задача'] || '';
+        document.getElementById('edit-modal-desc').value = task['Описание'] || '';
+        document.getElementById('edit-modal-urgent').checked = (task['Срочность'] === true || task['Срочность'] === 'true' || task['Срочность'] === 1);
+
+        let stages = { analysis: false, dev: false, test: false, paused: false };
+        try {
+            stages = typeof task['Этапы'] === 'string' ? JSON.parse(task['Этапы'] || '{}') : (task['Этапы'] || {});
+        } catch (e) {}
+
+        document.getElementById('stage-analysis').checked = !!stages.analysis;
+        document.getElementById('stage-dev').checked = !!stages.dev;
+        document.getElementById('stage-test').checked = !!stages.test;
+        
+        const isPaused = (task['Статус'] === 'На паузе') || (!!stages.paused);
+        document.getElementById('stage-paused').checked = isPaused;
+        toggleBlockerSection(isPaused);
+
+        document.getElementById('edit-modal-blocker').value = task['Блокер'] || '';
+
+        populateMoveMonthOptions(task['SheetName']);
+
+        const extraFields = document.getElementById('edit-extra-fields');
+        if (task['Статус'] === 'Готово в тестовой' || task['Статус'] === 'Проверено' || task['Статус'] === 'Готово в рабочей') {
+            extraFields.classList.remove('hidden');
+            extraFields.classList.add('flex');
+            document.getElementById('edit-modal-tag').value = task['Тэг'] || '';
+            document.getElementById('edit-modal-changes').value = task['Изменения'] || '';
+        } else {
+            extraFields.classList.add('hidden');
+            extraFields.classList.remove('flex');
+        }
+
+        const modal = document.getElementById('edit-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function populateMoveMonthOptions(currentSheet) {
+        const select = document.getElementById('move-month-select');
+        select.innerHTML = '';
+
+        const allMonths = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+        const list = [...new Set([...availableSheets, ...allMonths])];
+
+        list.forEach(m => {
+            if (m !== currentSheet) {
+                const opt = document.createElement("option");
+                opt.value = m;
+                opt.innerText = m;
+                select.appendChild(opt);
+            }
+        });
+
+        const customOpt = document.createElement("option");
+        customOpt.value = "__NEW__";
+        customOpt.innerText = "+ Другой месяц...";
+        select.appendChild(customOpt);
+    }
+
+    async function moveTaskToMonth() {
+        let target = document.getElementById('move-month-select').value;
+        if (target === "__NEW__") {
+            const promptName = prompt("Введите название нового месяца (листа):");
+            if (!promptName || !promptName.trim()) return;
+            target = promptName.trim();
+        }
+
+        const task = currentTasks.find(t => String(t['ID']) === String(activeTaskId));
+        if (!task) return;
+
+        const oldSheet = task['SheetName'];
+        if (confirm(`Перенести задачу #${task['ID']} из «${oldSheet}» в «${target}»?`)) {
+            setSyncStatus("Перенос задачи...", "amber");
+            task['SheetName'] = target;
+            task['Месяц'] = target;
+
+            closeModal('edit-modal');
+            if (!availableSheets.includes(target)) {
+                availableSheets.push(target);
+                populateMonthFilter();
+            }
+            renderBoard();
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        Action: "MOVE_MONTH",
+                        ID: task['ID'],
+                        Дата: task['Дата'] || "",
+                        SheetName: oldSheet,
+                        TargetSheetName: target,
+                        Задача: task['Задача'],
+                        Описание: task['Описание'] || "",
+                        Статус: task['Статус'] || "Создано",
+                        Тэг: task['Тэг'] || "",
+                        Изменения: task['Изменения'] || "",
+                        Срочность: task['Срочность'] || false,
+                        Этапы: task['Этапы'] || "{}",
+                        Блокер: task['Блокер'] || ""
+                    })
+                });
+                setSyncStatus("Синхронизировано", "emerald");
+            } catch (err) {
+                setSyncStatus("Ошибка переноса", "rose");
+            }
+        }
+    }
+
+    async function saveTaskDetails() {
+        const task = currentTasks.find(t => String(t['ID']) === String(activeTaskId));
+        if (task) {
+            task['Задача'] = document.getElementById('edit-modal-title').value;
+            task['Описание'] = document.getElementById('edit-modal-desc').value;
+            task['Срочность'] = document.getElementById('edit-modal-urgent').checked;
+
+            const isPausedChecked = document.getElementById('stage-paused').checked;
+            const stages = {
+                analysis: document.getElementById('stage-analysis').checked,
+                dev: document.getElementById('stage-dev').checked,
+                test: document.getElementById('stage-test').checked,
+                paused: isPausedChecked
+            };
+            task['Этапы'] = JSON.stringify(stages);
+            task['Блокер'] = isPausedChecked ? document.getElementById('edit-modal-blocker').value.trim() : "";
+
+            if (isPausedChecked && task['Статус'] !== 'Готово в рабочей' && task['Статус'] !== 'Проверено') {
+                task['Статус'] = 'На паузе';
+            } else if (!isPausedChecked && task['Статус'] === 'На паузе') {
+                task['Статус'] = 'В работе';
+            }
+
+            if (task['Статус'] === 'Готово в тестовой' || task['Статус'] === 'Проверено' || task['Статус'] === 'Готово в рабочей') {
+                task['Тэг'] = document.getElementById('edit-modal-tag').value;
+                task['Изменения'] = document.getElementById('edit-modal-changes').value;
+            }
+
+            closeModal('edit-modal');
+            renderBoard();
+            setSyncStatus("Сохранение...", "amber");
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(task)
                 });
                 setSyncStatus("Синхронизировано", "emerald");
             } catch (e) {
-                setSyncStatus("Ошибка добавления", "rose");
+                setSyncStatus("Ошибка сохранения", "rose");
             }
         }
+    }
 
-        function closeModal(id) {
-            const modal = document.getElementById(id);
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            if (id === 'edit-modal') activeTaskId = null;
+    function openCreateModal(defaultStatus = 'Создано') {
+        const monthSelect = document.getElementById('new-task-month');
+        monthSelect.innerHTML = '';
+        
+        const currentFilter = document.getElementById("month-filter").value;
+        availableSheets.forEach(sheet => {
+            const opt = document.createElement("option");
+            opt.value = sheet;
+            opt.innerText = sheet;
+            if (currentFilter !== 'ALL' && currentFilter === sheet) opt.selected = true;
+            monthSelect.appendChild(opt);
+        });
+
+        document.getElementById('new-task-status').value = defaultStatus;
+        document.getElementById('new-task-title').value = '';
+        document.getElementById('new-task-desc').value = '';
+        document.getElementById('new-task-urgent').checked = false;
+
+        const modal = document.getElementById('create-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => document.getElementById('new-task-title').focus(), 50);
+    }
+
+    async function createNewTask() {
+        const title = document.getElementById('new-task-title').value.trim();
+        if (!title) {
+            alert('Пожалуйста, укажите название задачи');
+            return;
         }
 
-        ['edit-modal', 'create-modal'].forEach(id => {
-            document.getElementById(id).addEventListener('click', function(e) {
-                if (e.target === this) closeModal(id);
-            });
-        });
+        const month = document.getElementById('new-task-month').value || availableSheets[0] || 'Сентябрь';
+        const status = document.getElementById('new-task-status').value;
+        const desc = document.getElementById('new-task-desc').value.trim();
+        const isUrgent = document.getElementById('new-task-urgent').checked;
 
-        // Горячая клавиша: N для создания задачи
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'n' || e.key === 'т') {
-                const activeTag = document.activeElement.tagName.toLowerCase();
-                if (activeTag !== 'input' && activeTag !== 'textarea') {
-                    e.preventDefault();
-                    openCreateModal();
-                }
-            }
-        });
+        const maxId = currentTasks.reduce((max, t) => {
+            const idNum = parseInt(t['ID'], 10);
+            return !isNaN(idNum) && idNum > max ? idNum : max;
+        }, 0);
+        const newId = maxId + 1;
 
-        window.onload = () => {
-            setTheme(currentTheme);
-            loadTasks(true);
+        const now = new Date();
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        const newTask = {
+            ID: newId,
+            Дата: dateStr,
+            SheetName: month,
+            Месяц: month,
+            Квартал: 'Q3',
+            Задача: title,
+            Описание: desc,
+            Статус: status,
+            Тэг: '',
+            Изменения: '',
+            Срочность: isUrgent,
+            Этапы: JSON.stringify({ analysis: false, dev: false, test: false, paused: (status === 'На паузе') }),
+            Блокер: ''
         };
-    </script>
-</body>
-</html>
+
+        currentTasks.unshift(newTask);
+        closeModal('create-modal');
+        renderBoard();
+
+        setSyncStatus("Добавление...", "amber");
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(newTask)
+            });
+            setSyncStatus("Синхронизировано", "emerald");
+        } catch (e) {
+            setSyncStatus("Ошибка добавления", "rose");
+        }
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        if (id === 'edit-modal') activeTaskId = null;
+    }
+
+    ['edit-modal', 'create-modal'].forEach(id => {
+        document.getElementById(id).addEventListener('click', function(e) {
+            if (e.target === this) closeModal(id);
+        });
+    });
+
+    // Горячая клавиша N / Т для моментального открытия создания задачи
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'n' || e.key === 'т' || e.key === 'N' || e.key === 'Т') {
+            const activeTag = document.activeElement.tagName.toLowerCase();
+            if (activeTag !== 'input' && activeTag !== 'textarea') {
+                e.preventDefault();
+                openCreateModal();
+            }
+        }
+    });
+
+    window.onload = () => {
+        setTheme(currentTheme);
+        loadTasks(true);
+    };
+</script>
