@@ -461,7 +461,9 @@
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyAvqcGLOttZXJiQn4O7aQ6nv_QjMWkpLqSJ32U00vcTaGCb8SiwOpbbm7E00BeJb4b/exec";
+        // ======= ВНИМАНИЕ: СЮДА ВСТАВИТЬ АКТУАЛЬНУЮ ССЫЛКУ ИЗ АКТИВНОГО РАЗВЕРТЫВАНИЯ ======= 
+        // Она должна начинаться с AKfycbyNvBR8xl...
+        const API_URL = AKfycbyNvBR8xl38DB1mnsAw-F-cDh1734WpVxPdXs7_KbWbtsBbbUo2uK0Gnsv325-oNhqw;
 
         let currentTasks = [];
         let activeTaskId = null;
@@ -755,8 +757,18 @@
                 } catch (e) {}
 
                 const isUrgent = task['Срочность'] === true || task['Срочность'] === 'true' || task['Срочность'] === 1;
-                let status = task['Статус'] || 'Создано';
-
+                
+                // ИСПРАВЛЕНИЕ ОПЕЧАТОК (защита от неправильного ввода статусов)
+                let rawStatus = task['Статус'] || 'Создано';
+                let status = rawStatus.trim();
+                
+                if (status === 'Готово в работе' || status.includes('Готово в рабоче')) {
+                    status = 'Готово в рабочей';
+                }
+                if (status === 'В тестовой' || status.includes('Готово в тестов')) {
+                    status = 'Готово в тестовой';
+                }
+                
                 const isPaused = (status === 'На паузе') || (stages.paused === true);
 
                 if (filterUrgent && !isUrgent) return;
@@ -771,7 +783,9 @@
                     return;
                 }
 
-                if (!counts.hasOwnProperty(status)) status = 'Создано';
+                if (!counts.hasOwnProperty(status)) {
+                    status = 'Создано';
+                }
 
                 const isNew = !localStorage.getItem('seen_' + task['ID']);
                 const card = document.createElement('div');
